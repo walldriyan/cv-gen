@@ -1,0 +1,5 @@
+{
+  "name": "Smart CV Builder (Sinhala Support)",
+  "description": "A dynamic CV generator with multi-template support, JSON/Excel handling, and dynamic tables for exam results. Designed with Sinhala instructions.",
+  "requestFramePermissions": []
+}
