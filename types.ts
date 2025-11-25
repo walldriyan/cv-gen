@@ -1,4 +1,5 @@
 
+
 export interface DynamicTableData {
   id: string;
   title: string;
@@ -39,6 +40,32 @@ export interface ImageStyle {
     borderColor: string;
 }
 
+export interface SectionStyle {
+    // Background
+    backgroundColor?: string;
+    
+    // Typography
+    color?: string; // Body Text color
+    headingColor?: string; // Specific Heading color override
+    fontSize?: number; // multiplier (0.8 - 2.0)
+    fontWeight?: 'normal' | 'bold' | 'light';
+    textAlign?: 'left' | 'center' | 'right' | 'justify';
+    
+    // Border (Box)
+    borderColor?: string;
+    borderRadius?: number;
+    borderWidth?: number;
+    borderStyle?: 'solid' | 'dashed' | 'dotted' | 'none';
+    
+    // Layout
+    padding?: number;
+    marginBottom?: number; // Spacing between items inside
+    
+    // Decorations (Lines/Steppers)
+    lineColor?: string;
+    lineWidth?: number; // px for borders/lines
+}
+
 export interface CVData {
   personalInfo: {
     fullName: string;
@@ -55,6 +82,35 @@ export interface CVData {
   education: Education[];
   skills: Skill[];
   customTables: DynamicTableData[];
+  // Store custom styles per section ID (e.g., 'sidebar', 'header', 'experience')
+  sectionStyles: Record<string, SectionStyle>; 
+}
+
+export interface ColorProfile {
+    id: string;
+    name: string;
+    colors: {
+        primary: string;
+        secondary: string;
+        text: string;
+        background: string;
+        heading: string;
+    };
+}
+
+export interface GlobalDesignSettings {
+    // Typography Scales (multipliers)
+    headingScale: number;
+    bodyScale: number;
+    
+    // Global Decoration Defaults
+    lineColor?: string;
+    lineWidth: number;
+    
+    // Global Borders
+    borderColor?: string;
+    borderStyle: 'solid' | 'dashed' | 'dotted' | 'none';
+    borderRadius: number; 
 }
 
 export interface AppConfig {
@@ -72,16 +128,17 @@ export interface AppConfig {
       heading: string;
       body: string;
   };
+  globalDesign: GlobalDesignSettings;
   spacing: number; // 1-3 scale
-  borderRadius: number; // 0-20px
+  borderRadius: number; // 0-20px (Legacy support, now merged into globalDesign but kept for compatibility)
   language: 'en' | 'si';
 }
 
 export const TRANSLATIONS = {
   en: {
     appTitle: "Smart CV",
-    tabData: "Data",
-    tabDesign: "Design",
+    tabData: "Content & Data",
+    tabDesign: "Design & Style",
     personalInfo: "Personal Info",
     experience: "Experience",
     education: "Education",
@@ -108,17 +165,24 @@ export const TRANSLATIONS = {
     addColumn: "Add Column",
     addRow: "Add Row",
     tableTitle: "Table Title",
-    advColors: "Advanced Colors",
+    advColors: "Color Palette",
     advFonts: "Advanced Fonts",
     borderRadius: "Border Radius",
     tableStyles: "Table Styles",
     headerBg: "Header Background",
-    borderColor: "Border Color"
+    borderColor: "Border Color",
+    loadProfile: "Load Profile",
+    saveProfile: "Save Profile",
+    deleteProfile: "Delete",
+    globalSettings: "Global Settings",
+    headingSize: "Heading Size",
+    bodySize: "Body Size",
+    lineStyle: "Line Style"
   },
   si: {
     appTitle: "Smart CV",
     tabData: "දත්ත",
-    tabDesign: "පෙනුම",
+    tabDesign: "මෝස්තරය",
     personalInfo: "පෞද්ගලික විස්තර",
     experience: "අත්දැකීම්",
     education: "අධ්‍යාපන සුදුසුකම්",
@@ -145,11 +209,18 @@ export const TRANSLATIONS = {
     addColumn: "තීරුවක් (+Col)",
     addRow: "පේළියක් (+Row)",
     tableTitle: "වගුවේ නම",
-    advColors: "සියලු වර්ණ",
+    advColors: "වර්ණ පුවරුව (Palette)",
     advFonts: "අකුරු වර්ග",
     borderRadius: "හැඩය (Radius)",
     tableStyles: "වගුවේ මෝස්තරය",
     headerBg: "මාතෘකා පසුබිම",
-    borderColor: "මායිම් වර්ණය"
+    borderColor: "මායිම් වර්ණය",
+    loadProfile: "තෝරන්න",
+    saveProfile: "සුරකින්න",
+    deleteProfile: "මකන්න",
+    globalSettings: "පොදු සැකසුම්",
+    headingSize: "මාතෘකා ප්‍රමාණය",
+    bodySize: "අකුරු ප්‍රමාණය",
+    lineStyle: "ඉරි සහ හැඩතල"
   }
 };
