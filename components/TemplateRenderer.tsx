@@ -35,6 +35,7 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
     '--primary': config.colors.primary,
     '--secondary': config.colors.secondary,
     '--text-main': config.colors.text,
+    '--text-head': config.colors.heading || config.colors.primary, // Fallback to primary if heading not set
     '--bg-main': config.colors.background,
     '--font-head': config.fonts.heading,
     '--font-body': config.fonts.body,
@@ -75,8 +76,8 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
                    <div className="flex justify-between mb-1">
                      <span>{skill.name}</span>
                    </div>
-                   <div className="w-full bg-white/30 h-1.5 rounded-full">
-                      <div className="bg-white h-1.5 rounded-full" style={{ width: `${skill.level * 20}%` }}></div>
+                   <div className="w-full bg-white/30 h-1.5" style={{ borderRadius: 'var(--radius)' }}>
+                      <div className="bg-white h-1.5" style={{ width: `${skill.level * 20}%`, borderRadius: 'var(--radius)' }}></div>
                    </div>
                 </div>
              ))}
@@ -85,18 +86,18 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
 
         {/* Main Content */}
         <div className="w-2/3 p-8 flex flex-col" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', gap: 'var(--spacing)', fontFamily: 'var(--font-body)' }}>
-           <div className="mb-4">
-              <h1 className="text-5xl font-bold uppercase tracking-tight break-words" style={{ color: 'var(--primary)', fontFamily: 'var(--font-head)' }}>
+           <div style={{ marginBottom: 'var(--spacing)' }}>
+              <h1 className="text-5xl font-bold uppercase tracking-tight break-words" style={{ color: 'var(--text-head)', fontFamily: 'var(--font-head)' }}>
                 {data.personalInfo.fullName}
               </h1>
               <p className="mt-4 leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--secondary)' }}>{data.personalInfo.summary}</p>
            </div>
 
            <div>
-              <h3 className="text-xl font-bold uppercase tracking-widest border-b-2 pb-2 mb-4" style={{ borderColor: 'var(--primary)', color: 'var(--primary)', fontFamily: 'var(--font-head)' }}>Experience</h3>
+              <h3 className="text-xl font-bold uppercase tracking-widest border-b-2 pb-2 mb-4" style={{ borderColor: 'var(--primary)', color: 'var(--text-head)', fontFamily: 'var(--font-head)' }}>Experience</h3>
               {data.experience.map(exp => (
-                 <div key={exp.id} className="mb-4 last:mb-0">
-                    <h4 className="font-bold text-lg">{exp.role}</h4>
+                 <div key={exp.id} className="mb-4 last:mb-0" style={{ marginBottom: 'var(--spacing)' }}>
+                    <h4 className="font-bold text-lg" style={{ color: 'var(--text-head)' }}>{exp.role}</h4>
                     <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--secondary)' }}>
                        <span className="font-semibold">{exp.company}</span>
                        <span>{exp.duration}</span>
@@ -107,10 +108,10 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
            </div>
 
            <div>
-              <h3 className="text-xl font-bold uppercase tracking-widest border-b-2 pb-2 mb-4" style={{ borderColor: 'var(--primary)', color: 'var(--primary)', fontFamily: 'var(--font-head)' }}>Education</h3>
+              <h3 className="text-xl font-bold uppercase tracking-widest border-b-2 pb-2 mb-4" style={{ borderColor: 'var(--primary)', color: 'var(--text-head)', fontFamily: 'var(--font-head)' }}>Education</h3>
               {data.education.map(edu => (
-                 <div key={edu.id} className="mb-3 last:mb-0">
-                    <h4 className="font-bold">{edu.degree}</h4>
+                 <div key={edu.id} className="mb-3 last:mb-0" style={{ marginBottom: 'calc(var(--spacing) * 0.5)' }}>
+                    <h4 className="font-bold" style={{ color: 'var(--text-head)' }}>{edu.degree}</h4>
                     <div className="text-sm" style={{ color: 'var(--secondary)' }}>{edu.school}, {edu.year}</div>
                  </div>
               ))}
@@ -142,7 +143,7 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
              style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontFamily: 'var(--font-body)' }}
           >
             <div className="text-center border-b-2 pb-6 mb-6" style={{ borderColor: 'var(--text-main)' }}>
-                <h1 className="text-4xl font-bold uppercase mb-2" style={{ fontFamily: 'var(--font-head)', color: 'var(--primary)' }}>{data.personalInfo.fullName}</h1>
+                <h1 className="text-4xl font-bold uppercase mb-2" style={{ fontFamily: 'var(--font-head)', color: 'var(--text-head)' }}>{data.personalInfo.fullName}</h1>
                 <p className="text-lg tracking-widest mb-2" style={{ color: 'var(--secondary)' }}>{data.personalInfo.title}</p>
                 <div className="flex justify-center flex-wrap gap-4 text-sm" style={{ color: 'var(--secondary)' }}>
                     <span>{data.personalInfo.email}</span> | <span>{data.personalInfo.phone}</span> | <span>{data.personalInfo.address}</span>
@@ -155,7 +156,7 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
 
             <div className="grid grid-cols-1" style={{ gap: 'var(--spacing)' }}>
                 <section>
-                    <h3 className="font-bold text-xl border-b mb-3 uppercase" style={{ fontFamily: 'var(--font-head)', borderColor: 'var(--secondary)' }}>Experience</h3>
+                    <h3 className="font-bold text-xl border-b mb-3 uppercase" style={{ fontFamily: 'var(--font-head)', borderColor: 'var(--secondary)', color: 'var(--text-head)' }}>Experience</h3>
                     {data.experience.map(exp => (
                         <div key={exp.id} className="mb-4 last:mb-0">
                             <div className="flex justify-between font-bold">
@@ -169,7 +170,7 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
                 </section>
 
                 <section>
-                    <h3 className="font-bold text-xl border-b mb-3 uppercase" style={{ fontFamily: 'var(--font-head)', borderColor: 'var(--secondary)' }}>Education</h3>
+                    <h3 className="font-bold text-xl border-b mb-3 uppercase" style={{ fontFamily: 'var(--font-head)', borderColor: 'var(--secondary)', color: 'var(--text-head)' }}>Education</h3>
                     {data.education.map(edu => (
                         <div key={edu.id} className="flex justify-between mb-2">
                             <span>{edu.school} - <span className="italic">{edu.degree}</span></span>
@@ -179,7 +180,7 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
                 </section>
                 
                 <section>
-                    {data.customTables.length > 0 && <h3 className="font-bold text-xl border-b mb-3 uppercase" style={{ fontFamily: 'var(--font-head)', borderColor: 'var(--secondary)' }}>Additional Data</h3>}
+                    {data.customTables.length > 0 && <h3 className="font-bold text-xl border-b mb-3 uppercase" style={{ fontFamily: 'var(--font-head)', borderColor: 'var(--secondary)', color: 'var(--text-head)' }}>Additional Data</h3>}
                     {data.customTables.map((table, i) => (
                         <DynamicTable 
                             key={table.id} 
@@ -217,7 +218,7 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
        <div className="mt-16 px-12 pb-12 grow" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontFamily: 'var(--font-body)' }}>
           <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
              <div>
-                <h1 className="text-5xl font-bold break-words" style={{ fontFamily: 'var(--font-head)', color: 'var(--text-main)' }}>{data.personalInfo.fullName}</h1>
+                <h1 className="text-5xl font-bold break-words" style={{ fontFamily: 'var(--font-head)', color: 'var(--text-head)' }}>{data.personalInfo.fullName}</h1>
                 <p className="text-2xl mt-1" style={{ color: 'var(--secondary)' }}>{data.personalInfo.title}</p>
              </div>
              <div className="text-right text-sm space-y-1" style={{ color: 'var(--secondary)' }}>
@@ -230,20 +231,20 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
           <div className="grid grid-cols-12 gap-8">
              <div className="col-span-8 space-y-6">
                 <section>
-                   <h3 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--primary)', fontFamily: 'var(--font-head)' }}>
-                      <span className="w-2 h-8 block rounded-sm" style={{ backgroundColor: 'currentColor', borderRadius: '4px' }}></span> Profile
+                   <h3 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--text-head)', fontFamily: 'var(--font-head)' }}>
+                      <span className="w-2 h-8 block" style={{ backgroundColor: 'var(--primary)', borderRadius: '4px' }}></span> Profile
                    </h3>
                    <p className="leading-relaxed whitespace-pre-wrap">{data.personalInfo.summary}</p>
                 </section>
 
                 <section>
-                   <h3 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--primary)', fontFamily: 'var(--font-head)' }}>
-                      <span className="w-2 h-8 block rounded-sm" style={{ backgroundColor: 'currentColor', borderRadius: '4px' }}></span> Experience
+                   <h3 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--text-head)', fontFamily: 'var(--font-head)' }}>
+                      <span className="w-2 h-8 block" style={{ backgroundColor: 'var(--primary)', borderRadius: '4px' }}></span> Experience
                    </h3>
                    {data.experience.map(exp => (
-                      <div key={exp.id} className="relative pl-6 border-l-2 mb-6 last:mb-0" style={{ borderColor: 'var(--secondary)' }}>
-                         <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4" style={{ borderColor: 'var(--secondary)' }}></div>
-                         <h4 className="font-bold text-lg">{exp.role}</h4>
+                      <div key={exp.id} className="relative pl-6 border-l-2 mb-6 last:mb-0" style={{ borderColor: 'var(--secondary)', marginBottom: 'var(--spacing)' }}>
+                         <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4" style={{ borderColor: 'var(--secondary)', borderRadius: 'var(--radius)' }}></div>
+                         <h4 className="font-bold text-lg" style={{ color: 'var(--text-head)' }}>{exp.role}</h4>
                          <div className="text-sm font-semibold mb-2" style={{ color: 'var(--primary)' }}>{exp.company} | {exp.duration}</div>
                          <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--secondary)' }}>{exp.description}</p>
                       </div>
@@ -264,7 +265,7 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
                 </section>
              </div>
 
-             <div className="col-span-4 flex flex-col gap-6 p-6 rounded-xl" style={{ backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 'var(--radius)' }}>
+             <div className="col-span-4 flex flex-col gap-6 p-6" style={{ backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 'var(--radius)' }}>
                  <section>
                     <h3 className="font-bold text-lg mb-4 uppercase" style={{ color: 'var(--secondary)', fontFamily: 'var(--font-head)' }}>Education</h3>
                     {data.education.map(edu => (

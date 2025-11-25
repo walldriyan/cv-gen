@@ -49,7 +49,8 @@ const App: React.FC = () => {
         primary: '#3b82f6',
         secondary: '#4b5563',
         text: '#111827',
-        background: '#ffffff'
+        background: '#ffffff',
+        heading: '#3b82f6'
     },
     fonts: {
         heading: 'Inter, sans-serif',
@@ -65,6 +66,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'details' | 'design'>('details');
   const [designSubTab, setDesignSubTab] = useState<'basic' | 'advanced'>('basic');
   const [aiLoading, setAiLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -78,6 +80,33 @@ const App: React.FC = () => {
   const [contentHeight, setContentHeight] = useState(1123);
 
   const t = TRANSLATIONS[config.language];
+
+  // --- LOCAL STORAGE LOGIC ---
+  useEffect(() => {
+    // Load from LocalStorage on mount
+    const savedData = localStorage.getItem('cv_builder_data');
+    const savedConfig = localStorage.getItem('cv_builder_config');
+    
+    if (savedData) {
+        try {
+            setCVData(JSON.parse(savedData));
+        } catch (e) { console.error("Error loading saved data", e); }
+    }
+    if (savedConfig) {
+        try {
+            setConfig(JSON.parse(savedConfig));
+        } catch (e) { console.error("Error loading saved config", e); }
+    }
+    setDataLoaded(true);
+  }, []);
+
+  useEffect(() => {
+      if (!dataLoaded) return;
+      // Save to LocalStorage whenever changes happen
+      localStorage.setItem('cv_builder_data', JSON.stringify(cvData));
+      localStorage.setItem('cv_builder_config', JSON.stringify(config));
+  }, [cvData, config, dataLoaded]);
+
 
   // Monitor Content Height for resizing
   useEffect(() => {
@@ -97,11 +126,12 @@ const App: React.FC = () => {
 
   // Handle PDF Download
   const handlePrint = () => {
-    setIsEditing(false);
-    setTimeout(() => {
-      window.print();
-      setIsEditing(true);
-    }, 500);
+    try {
+        window.print();
+    } catch (e) {
+        console.error("Print Error:", e);
+        alert("There was an error generating the PDF. Please check the console.");
+    }
   };
 
   // Handle JSON Import
@@ -181,21 +211,27 @@ const App: React.FC = () => {
       reader.onloadend = async () => {
           const base64 = reader.result as string;
           setAiLoading(true);
-          const suggestion = await suggestTemplateFromImage(base64);
-          setConfig(prev => ({
-              ...prev, 
-              templateId: suggestion.templateId,
-              colors: {
-                  ...prev.colors,
-                  primary: suggestion.primaryColor,
-                  secondary: suggestion.secondaryColor,
-                  background: suggestion.backgroundColor
-              },
-              fonts: {
-                  ...prev.fonts,
-                  heading: suggestion.headingFont
-              }
-          }));
+          try {
+             const suggestion = await suggestTemplateFromImage(base64);
+             setConfig(prev => ({
+                 ...prev, 
+                 templateId: suggestion.templateId,
+                 colors: {
+                     ...prev.colors,
+                     primary: suggestion.primaryColor,
+                     secondary: suggestion.secondaryColor,
+                     background: suggestion.backgroundColor,
+                     heading: suggestion.headingColor
+                 },
+                 fonts: {
+                     ...prev.fonts,
+                     heading: suggestion.headingFont
+                 }
+             }));
+          } catch (e) {
+             console.error("Image Scan Error:", e);
+             alert("Error scanning image");
+          }
           setAiLoading(false);
       }
       reader.readAsDataURL(file);
@@ -304,20 +340,20 @@ const App: React.FC = () => {
          {/* Language Toggle (Desktop) */}
          <div className="hidden md:flex justify-between items-center p-4 border-b">
              <h1 className="font-bold text-lg text-blue-600">{t.appTitle}</h1>
-             <button onClick={() => setConfig({...config, language: config.language === 'en' ? 'si' : 'en'})} className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-bold flex items-center gap-1 transition-colors">
+             <button onClick={() => setConfig({...config, language: config.language === 'en' ? 'si' : 'en'})} className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-bold flex items-center gap-1 transition-colors text-gray-900">
                 <Globe size={14}/> {config.language === 'en' ? 'English' : 'සිංහල'}
              </button>
          </div>
 
          <div className="p-4 border-b flex gap-2">
             <button 
-                className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === 'details' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`}
+                className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === 'details' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setActiveTab('details')}
             >
                 <Type size={16} className="inline mr-1"/> {t.tabData}
             </button>
             <button 
-                className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === 'design' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100'}`}
+                className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === 'design' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}
                 onClick={() => setActiveTab('design')}
             >
                 <Palette size={16} className="inline mr-1"/> {t.tabDesign}
@@ -338,16 +374,16 @@ const App: React.FC = () => {
                                <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white text-xs">Edit</div>
                            </div>
                            <div className="flex-1 space-y-2">
-                               <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white" placeholder="Full Name" value={cvData.personalInfo.fullName} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, fullName: e.target.value}})} />
-                               <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white" placeholder="Job Title" value={cvData.personalInfo.title} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, title: e.target.value}})} />
+                               <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white text-gray-900" placeholder="Full Name" value={cvData.personalInfo.fullName} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, fullName: e.target.value}})} />
+                               <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white text-gray-900" placeholder="Job Title" value={cvData.personalInfo.title} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, title: e.target.value}})} />
                            </div>
                         </div>
-                        <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white" placeholder="Phone" value={cvData.personalInfo.phone} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, phone: e.target.value}})} />
-                        <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white" placeholder="Email" value={cvData.personalInfo.email} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, email: e.target.value}})} />
-                         <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white" placeholder="Address" value={cvData.personalInfo.address} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, address: e.target.value}})} />
+                        <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white text-gray-900" placeholder="Phone" value={cvData.personalInfo.phone} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, phone: e.target.value}})} />
+                        <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white text-gray-900" placeholder="Email" value={cvData.personalInfo.email} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, email: e.target.value}})} />
+                         <input autoComplete="off" className="w-full border p-2 rounded text-sm bg-white text-gray-900" placeholder="Address" value={cvData.personalInfo.address} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, address: e.target.value}})} />
                         
                         <div className="relative">
-                            <textarea className="w-full border p-2 rounded text-sm h-24 bg-white" placeholder="Professional Summary" value={cvData.personalInfo.summary} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, summary: e.target.value}})} />
+                            <textarea className="w-full border p-2 rounded text-sm h-24 bg-white text-gray-900" placeholder="Professional Summary" value={cvData.personalInfo.summary} onChange={e => setCVData({...cvData, personalInfo: {...cvData.personalInfo, summary: e.target.value}})} />
                             <button 
                                 onClick={async () => {
                                     const res = await improveSection(cvData.personalInfo.summary, 'summary');
@@ -371,16 +407,16 @@ const App: React.FC = () => {
                                     setCVData({...cvData, experience: newExp});
                                 }} className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100"><X size={14}/></button>
                                 
-                                <input autoComplete="off" className="w-full bg-white border rounded p-2 mb-2 text-sm font-semibold placeholder-gray-400" placeholder="Job Role" value={exp.role} onChange={e => {
+                                <input autoComplete="off" className="w-full bg-white border rounded p-2 mb-2 text-sm font-semibold placeholder-gray-400 text-gray-900" placeholder="Job Role" value={exp.role} onChange={e => {
                                     const newExp = [...cvData.experience]; newExp[idx].role = e.target.value; setCVData({...cvData, experience: newExp});
                                 }} />
-                                <input autoComplete="off" className="w-full bg-white border rounded p-2 mb-2 text-sm placeholder-gray-400" placeholder="Company" value={exp.company} onChange={e => {
+                                <input autoComplete="off" className="w-full bg-white border rounded p-2 mb-2 text-sm placeholder-gray-400 text-gray-900" placeholder="Company" value={exp.company} onChange={e => {
                                     const newExp = [...cvData.experience]; newExp[idx].company = e.target.value; setCVData({...cvData, experience: newExp});
                                 }} />
-                                 <input autoComplete="off" className="w-full bg-white border rounded p-2 mb-2 text-xs text-gray-500 placeholder-gray-400" placeholder="Duration" value={exp.duration} onChange={e => {
+                                 <input autoComplete="off" className="w-full bg-white border rounded p-2 mb-2 text-xs text-gray-500 placeholder-gray-400 text-gray-900" placeholder="Duration" value={exp.duration} onChange={e => {
                                     const newExp = [...cvData.experience]; newExp[idx].duration = e.target.value; setCVData({...cvData, experience: newExp});
                                 }} />
-                                <textarea className="w-full bg-white border rounded p-2 text-xs placeholder-gray-400" rows={2} placeholder="Description" value={exp.description} onChange={e => {
+                                <textarea className="w-full bg-white border rounded p-2 text-xs placeholder-gray-400 text-gray-900" rows={2} placeholder="Description" value={exp.description} onChange={e => {
                                     const newExp = [...cvData.experience]; newExp[idx].description = e.target.value; setCVData({...cvData, experience: newExp});
                                 }} />
                             </div>
@@ -389,12 +425,58 @@ const App: React.FC = () => {
                             setCVData({...cvData, experience: [...cvData.experience, {id: Date.now().toString(), role: '', company: '', duration: '', description: ''}]})
                         }}>+ {t.addExp}</button>
                     </section>
+                    
+                    <section className="space-y-3 pt-4 border-t">
+                        <h3 className="font-bold text-gray-700">{t.education}</h3>
+                        {cvData.education.map((edu, idx) => (
+                            <div key={edu.id} className="p-3 bg-gray-50 rounded border relative group">
+                                <button onClick={() => {
+                                    const newEdu = cvData.education.filter((_, i) => i !== idx);
+                                    setCVData({...cvData, education: newEdu});
+                                }} className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100"><X size={14}/></button>
+                                
+                                <input autoComplete="off" className="w-full bg-white border rounded p-2 mb-2 text-sm font-semibold placeholder-gray-400 text-gray-900" placeholder="Degree" value={edu.degree} onChange={e => {
+                                    const newEdu = [...cvData.education]; newEdu[idx].degree = e.target.value; setCVData({...cvData, education: newEdu});
+                                }} />
+                                <input autoComplete="off" className="w-full bg-white border rounded p-2 mb-2 text-sm placeholder-gray-400 text-gray-900" placeholder="School" value={edu.school} onChange={e => {
+                                    const newEdu = [...cvData.education]; newEdu[idx].school = e.target.value; setCVData({...cvData, education: newEdu});
+                                }} />
+                                 <input autoComplete="off" className="w-full bg-white border rounded p-2 mb-2 text-xs text-gray-500 placeholder-gray-400 text-gray-900" placeholder="Year" value={edu.year} onChange={e => {
+                                    const newEdu = [...cvData.education]; newEdu[idx].year = e.target.value; setCVData({...cvData, education: newEdu});
+                                }} />
+                            </div>
+                        ))}
+                        <button className="w-full py-2 border-2 border-dashed text-gray-400 hover:text-gray-600 rounded text-sm" onClick={() => {
+                            setCVData({...cvData, education: [...cvData.education, {id: Date.now().toString(), degree: '', school: '', year: ''}]})
+                        }}>+ Add Education</button>
+                    </section>
+
+                    <section className="space-y-3 pt-4 border-t">
+                        <h3 className="font-bold text-gray-700">{t.skills}</h3>
+                        {cvData.skills.map((skill, idx) => (
+                            <div key={skill.id} className="flex gap-2 items-center">
+                                <input autoComplete="off" className="flex-1 bg-white border rounded p-2 text-sm text-gray-900" placeholder="Skill Name" value={skill.name} onChange={e => {
+                                    const newSkills = [...cvData.skills]; newSkills[idx].name = e.target.value; setCVData({...cvData, skills: newSkills});
+                                }} />
+                                <input type="number" min="1" max="5" className="w-16 bg-white border rounded p-2 text-sm text-gray-900" value={skill.level} onChange={e => {
+                                    const newSkills = [...cvData.skills]; newSkills[idx].level = parseInt(e.target.value); setCVData({...cvData, skills: newSkills});
+                                }} />
+                                <button onClick={() => {
+                                    const newSkills = cvData.skills.filter((_, i) => i !== idx);
+                                    setCVData({...cvData, skills: newSkills});
+                                }} className="text-red-400 hover:text-red-600"><X size={14}/></button>
+                            </div>
+                        ))}
+                         <button className="w-full py-2 border-2 border-dashed text-gray-400 hover:text-gray-600 rounded text-sm" onClick={() => {
+                            setCVData({...cvData, skills: [...cvData.skills, {id: Date.now().toString(), name: '', level: 3}]})
+                        }}>+ Add Skill</button>
+                    </section>
 
                     <section className="space-y-3 pt-4 border-t">
                         <h3 className="font-bold text-gray-700">{t.customTables}</h3>
                         <div className="space-y-2">
                              {cvData.customTables.map((table, i) => (
-                                 <div key={table.id} onClick={() => handleEditTable(i)} className="flex items-center justify-between p-3 bg-white border rounded hover:bg-blue-50 cursor-pointer">
+                                 <div key={table.id} onClick={() => handleEditTable(i)} className="flex items-center justify-between p-3 bg-white border rounded hover:bg-blue-50 cursor-pointer text-gray-900">
                                      <span className="text-sm font-semibold truncate">{table.title}</span>
                                      <Settings size={14} className="text-gray-400"/>
                                  </div>
@@ -414,8 +496,8 @@ const App: React.FC = () => {
                 <>
                     {/* Basic / Advanced Toggle */}
                     <div className="flex bg-gray-100 p-1 rounded mb-4">
-                        <button onClick={() => setDesignSubTab('basic')} className={`flex-1 py-1 text-xs font-bold rounded ${designSubTab === 'basic' ? 'bg-white shadow' : 'text-gray-500'}`}>Basic</button>
-                        <button onClick={() => setDesignSubTab('advanced')} className={`flex-1 py-1 text-xs font-bold rounded ${designSubTab === 'advanced' ? 'bg-white shadow' : 'text-gray-500'}`}>Advanced</button>
+                        <button onClick={() => setDesignSubTab('basic')} className={`flex-1 py-1 text-xs font-bold rounded ${designSubTab === 'basic' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>Basic</button>
+                        <button onClick={() => setDesignSubTab('advanced')} className={`flex-1 py-1 text-xs font-bold rounded ${designSubTab === 'advanced' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>Advanced</button>
                     </div>
 
                     {designSubTab === 'basic' ? (
@@ -427,7 +509,7 @@ const App: React.FC = () => {
                                          <button 
                                             key={type}
                                             onClick={() => setConfig({...config, templateId: type as any})}
-                                            className={`p-2 border rounded text-xs capitalize ${config.templateId === type ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-gray-200 hover:border-blue-300'}`}
+                                            className={`p-2 border rounded text-xs capitalize text-gray-900 ${config.templateId === type ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-gray-200 hover:border-blue-300'}`}
                                          >
                                              {type}
                                          </button>
@@ -436,7 +518,7 @@ const App: React.FC = () => {
                                 <div className="p-4 bg-yellow-50 rounded border border-yellow-200">
                                     <h4 className="font-bold text-xs text-yellow-800 mb-2 flex items-center gap-2"><Upload size={12}/> {t.scanImage}</h4>
                                     <p className="text-xs text-yellow-700 mb-2">{t.scanDesc}</p>
-                                    <input type="file" accept="image/*" className="text-xs w-full" onChange={handleImageUpload} />
+                                    <input type="file" accept="image/*" className="text-xs w-full text-gray-700" onChange={handleImageUpload} />
                                 </div>
                             </section>
 
@@ -448,7 +530,7 @@ const App: React.FC = () => {
                                             key={color} 
                                             className={`w-8 h-8 rounded-full border-2 transition-transform ${config.colors.primary === color ? 'border-gray-600 scale-110 shadow' : 'border-white hover:scale-105'}`}
                                             style={{backgroundColor: color}}
-                                            onClick={() => setConfig({...config, colors: {...config.colors, primary: color}})}
+                                            onClick={() => setConfig({...config, colors: {...config.colors, primary: color, heading: color}})}
                                         />
                                     ))}
                                 </div>
@@ -461,19 +543,23 @@ const App: React.FC = () => {
                                 <h3 className="font-bold text-gray-700 flex items-center gap-2"><Sliders size={14}/> {t.advColors}</h3>
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs">Primary</span>
+                                        <span className="text-xs text-gray-900">Primary Brand</span>
                                         <input type="color" value={config.colors.primary} onChange={e => setConfig({...config, colors: {...config.colors, primary: e.target.value}})} className="h-6 w-10 border rounded cursor-pointer"/>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs">Secondary</span>
+                                        <span className="text-xs text-gray-900">Headings</span>
+                                        <input type="color" value={config.colors.heading || config.colors.primary} onChange={e => setConfig({...config, colors: {...config.colors, heading: e.target.value}})} className="h-6 w-10 border rounded cursor-pointer"/>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-gray-900">Subtitles (Secondary)</span>
                                         <input type="color" value={config.colors.secondary} onChange={e => setConfig({...config, colors: {...config.colors, secondary: e.target.value}})} className="h-6 w-10 border rounded cursor-pointer"/>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs">Text</span>
+                                        <span className="text-xs text-gray-900">Body Text</span>
                                         <input type="color" value={config.colors.text} onChange={e => setConfig({...config, colors: {...config.colors, text: e.target.value}})} className="h-6 w-10 border rounded cursor-pointer"/>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs">Background</span>
+                                        <span className="text-xs text-gray-900">Background</span>
                                         <input type="color" value={config.colors.background} onChange={e => setConfig({...config, colors: {...config.colors, background: e.target.value}})} className="h-6 w-10 border rounded cursor-pointer"/>
                                     </div>
                                 </div>
@@ -483,13 +569,13 @@ const App: React.FC = () => {
                                 <h3 className="font-bold text-gray-700 flex items-center gap-2"><Type size={14}/> {t.advFonts}</h3>
                                 <div>
                                     <label className="text-xs text-gray-500">Headings</label>
-                                    <select className="w-full border rounded p-1 text-sm bg-white" value={config.fonts.heading} onChange={e => setConfig({...config, fonts: {...config.fonts, heading: e.target.value}})}>
+                                    <select className="w-full border rounded p-1 text-sm bg-white text-gray-900" value={config.fonts.heading} onChange={e => setConfig({...config, fonts: {...config.fonts, heading: e.target.value}})}>
                                         {FONTS.map(f => <option key={f.value} value={f.value}>{f.name}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="text-xs text-gray-500">Body Text</label>
-                                    <select className="w-full border rounded p-1 text-sm bg-white" value={config.fonts.body} onChange={e => setConfig({...config, fonts: {...config.fonts, body: e.target.value}})}>
+                                    <select className="w-full border rounded p-1 text-sm bg-white text-gray-900" value={config.fonts.body} onChange={e => setConfig({...config, fonts: {...config.fonts, body: e.target.value}})}>
                                         {FONTS.map(f => <option key={f.value} value={f.value}>{f.name}</option>)}
                                     </select>
                                 </div>
@@ -519,10 +605,10 @@ const App: React.FC = () => {
                  <Download size={18}/> {t.downloadPdf}
              </button>
              <div className="flex gap-2">
-                 <button onClick={handleJsonDownload} className="flex-1 flex items-center justify-center gap-1 bg-white border border-gray-300 py-2 rounded text-xs hover:bg-gray-50 transition-colors">
+                 <button onClick={handleJsonDownload} className="flex-1 flex items-center justify-center gap-1 bg-white border border-gray-300 py-2 rounded text-xs hover:bg-gray-50 transition-colors text-gray-900">
                      <Save size={14}/> JSON
                  </button>
-                 <label className="flex-1 flex items-center justify-center gap-1 bg-white border border-gray-300 py-2 rounded text-xs hover:bg-gray-50 transition-colors cursor-pointer">
+                 <label className="flex-1 flex items-center justify-center gap-1 bg-white border border-gray-300 py-2 rounded text-xs hover:bg-gray-50 transition-colors cursor-pointer text-gray-900">
                      <Upload size={14}/> Import
                      <input type="file" accept=".json" className="hidden" onChange={handleJsonUpload} />
                  </label>

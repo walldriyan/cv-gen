@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { DynamicTableData } from '../types';
 import { Edit2, Trash2 } from 'lucide-react';
@@ -11,6 +12,12 @@ interface Props {
 }
 
 export const DynamicTable: React.FC<Props> = ({ table, onEdit, onDelete, isEditing, primaryColor }) => {
+  // Use custom styles or fallbacks
+  const headerBg = table.styles?.headerBg || primaryColor;
+  const headerText = table.styles?.headerText || '#ffffff';
+  const borderColor = table.styles?.borderColor || '#e5e7eb'; // gray-200
+  const textColor = table.styles?.textColor || 'inherit';
+
   return (
     <div className="mb-6 relative group">
        <div className="flex justify-between items-center mb-2">
@@ -27,12 +34,12 @@ export const DynamicTable: React.FC<Props> = ({ table, onEdit, onDelete, isEditi
          )}
        </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left border-collapse">
+      <div className="overflow-x-auto" style={{ borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <table className="w-full text-sm text-left border-collapse" style={{ color: textColor }}>
           <thead>
-            <tr style={{ backgroundColor: primaryColor, color: '#fff' }}>
+            <tr style={{ backgroundColor: headerBg, color: headerText }}>
               {table.headers.map((header, i) => (
-                <th key={i} className="p-2 border border-white/20">
+                <th key={i} className="p-2 border" style={{ borderColor: 'rgba(255,255,255,0.2)' }}>
                     {header}
                 </th>
               ))}
@@ -40,9 +47,9 @@ export const DynamicTable: React.FC<Props> = ({ table, onEdit, onDelete, isEditi
           </thead>
           <tbody>
             {table.rows.map((row, rIndex) => (
-              <tr key={rIndex} className={rIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+              <tr key={rIndex} className={rIndex % 2 === 0 ? 'bg-opacity-5' : 'bg-transparent'} style={{ backgroundColor: rIndex % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent' }}>
                 {row.map((cell, cIndex) => (
-                  <td key={cIndex} className="p-2 border border-gray-200">
+                  <td key={cIndex} className="p-2 border" style={{ borderColor: borderColor }}>
                       {cell}
                   </td>
                 ))}

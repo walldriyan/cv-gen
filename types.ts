@@ -4,6 +4,12 @@ export interface DynamicTableData {
   title: string;
   headers: string[];
   rows: string[][];
+  styles?: {
+    headerBg?: string;
+    headerText?: string;
+    borderColor?: string;
+    textColor?: string;
+  };
 }
 
 export interface Experience {
@@ -52,6 +58,7 @@ export interface AppConfig {
       secondary: string;
       text: string;
       background: string;
+      heading: string; // Separate color for headings
   };
   // Advanced Fonts
   fonts: {
@@ -96,7 +103,10 @@ export const TRANSLATIONS = {
     tableTitle: "Table Title",
     advColors: "Advanced Colors",
     advFonts: "Advanced Fonts",
-    borderRadius: "Border Radius"
+    borderRadius: "Border Radius",
+    tableStyles: "Table Styles",
+    headerBg: "Header Background",
+    borderColor: "Border Color"
   },
   si: {
     appTitle: "Smart CV",
@@ -130,6 +140,9 @@ export const TRANSLATIONS = {
     tableTitle: "වගුවේ නම",
     advColors: "සියලු වර්ණ",
     advFonts: "අකුරු වර්ග",
-    borderRadius: "හැඩය (Radius)"
+    borderRadius: "හැඩය (Radius)",
+    tableStyles: "වගුවේ මෝස්තරය",
+    headerBg: "මාතෘකා පසුබිම",
+    borderColor: "මායිම් වර්ණය"
   }
 };

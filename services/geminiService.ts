@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Schema, Type } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const getAiClient = () => {
   const apiKey = process.env.API_KEY;
@@ -30,6 +30,7 @@ interface TemplateSuggestion {
     primaryColor: string;
     secondaryColor: string;
     backgroundColor: string;
+    headingColor: string;
     headingFont: string;
 }
 
@@ -41,17 +42,23 @@ export const suggestTemplateFromImage = async (base64Image: string): Promise<Tem
        primaryColor: '#3b82f6', 
        secondaryColor: '#6b7280', 
        backgroundColor: '#ffffff',
+       headingColor: '#1e3a8a',
        headingFont: 'Inter, sans-serif'
    };
 
    if (!ai) return fallback;
 
+   // Detect mime type or default to png
+   const mimeMatch = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/);
+   const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+   const cleanBase64 = base64Image.split(',')[1];
+
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: [
-                { text: "Analyze this CV image. 1. Identify the style (Modern, Classic, or Creative). 2. Extract the dominant primary color (hex code). 3. Extract a secondary accent color (hex). 4. Extract the background color (hex). 5. Suggest a font style (Sans-serif or Serif). Return JSON." },
-                { inlineData: { mimeType: 'image/png', data: base64Image.split(',')[1] } }
+                { text: "Analyze this CV image. 1. Identify the style (Modern, Classic, or Creative). 2. Extract the dominant primary color (hex). 3. Extract the text/heading color (hex). 4. Extract the background color (hex). 5. Suggest a font style (Sans-serif or Serif). Return JSON." },
+                { inlineData: { mimeType: mimeType, data: cleanBase64 } }
             ],
             config: {
                 responseMimeType: "application/json",
@@ -68,8 +75,9 @@ export const suggestTemplateFromImage = async (base64Image: string): Promise<Tem
             }
         });
         
-        const text = response.text;
-        if (!text) return fallback;
+        let text = response.text || "{}";
+        // Clean markdown if present
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
         
         const data = JSON.parse(text);
         
@@ -78,11 +86,12 @@ export const suggestTemplateFromImage = async (base64Image: string): Promise<Tem
             primaryColor: data.primaryColor || '#3b82f6',
             secondaryColor: data.secondaryColor || '#6b7280',
             backgroundColor: data.backgroundColor || '#ffffff',
+            headingColor: data.primaryColor || '#1e3a8a', // Use primary as fallback for heading
             headingFont: data.fontType === 'Serif' ? 'Playfair Display, serif' : 'Inter, sans-serif'
         };
 
     } catch (e) {
-        console.error(e);
+        console.error("AI Scan Error:", e);
         return fallback;
     }
 }
