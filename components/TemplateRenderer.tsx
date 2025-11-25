@@ -2,7 +2,7 @@
 import React from 'react';
 import { CVData, AppConfig, DynamicTableData } from '../types';
 import { DynamicTable } from './DynamicTable';
-import { Mail, Phone, MapPin, Linkedin } from 'lucide-react';
+import { Mail, Phone, MapPin, Linkedin, Edit2 } from 'lucide-react';
 
 interface Props {
   data: CVData;
@@ -10,9 +10,10 @@ interface Props {
   setCVData: React.Dispatch<React.SetStateAction<CVData>>;
   isEditing: boolean;
   onEditTable: (index: number) => void;
+  onEditImage: () => void;
 }
 
-export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isEditing, onEditTable }) => {
+export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isEditing, onEditTable, onEditImage }) => {
   
   const deleteTable = (index: number) => {
     if(window.confirm("Are you sure you want to delete this table?")) {
@@ -35,13 +36,48 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
     '--primary': config.colors.primary,
     '--secondary': config.colors.secondary,
     '--text-main': config.colors.text,
-    '--text-head': config.colors.heading || config.colors.primary, // Fallback to primary if heading not set
+    '--text-head': config.colors.heading || config.colors.primary, 
     '--bg-main': config.colors.background,
     '--font-head': config.fonts.heading,
     '--font-body': config.fonts.body,
     '--spacing': getSpacing(),
     '--radius': `${config.borderRadius}px`,
   } as React.CSSProperties;
+
+  // Custom Image Style
+  const imgStyle = data.personalInfo.imageStyle 
+    ? { 
+        borderRadius: `${data.personalInfo.imageStyle.borderRadius}%`,
+        borderWidth: `${data.personalInfo.imageStyle.borderWidth}px`,
+        borderColor: data.personalInfo.imageStyle.borderColor
+      }
+    : { borderRadius: 'var(--radius)', borderWidth: '4px', borderColor: 'white' };
+
+  const ProfileImage = () => (
+      <div className="relative group inline-block">
+        {data.personalInfo.imageUrl ? (
+            <img 
+                src={data.personalInfo.imageUrl} 
+                alt="Profile" 
+                className="w-32 h-32 object-cover shadow-lg" 
+                style={{ ...imgStyle, borderStyle: 'solid' }}
+            />
+        ) : (
+            <div className="w-32 h-32 bg-gray-300 flex items-center justify-center shadow-lg" style={{ ...imgStyle, borderStyle: 'solid' }}>
+                <span className="text-gray-500 text-xs">No Photo</span>
+            </div>
+        )}
+        {isEditing && (
+            <button 
+                onClick={(e) => { e.stopPropagation(); onEditImage(); }}
+                className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-full transition-opacity no-print z-10"
+                style={{ borderRadius: imgStyle.borderRadius }}
+            >
+                <Edit2 size={20} />
+            </button>
+        )}
+      </div>
+  );
 
   /* --- MODERN TEMPLATE (Sidebar Layout) --- */
   if (config.templateId === 'modern') {
@@ -50,14 +86,9 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
         {/* Sidebar */}
         <div className="w-1/3 text-white p-8 flex flex-col gap-6" style={{ backgroundColor: 'var(--primary)', fontFamily: 'var(--font-body)' }}>
           <div className="flex flex-col items-center text-center">
-            {data.personalInfo.imageUrl && (
-              <img 
-                src={data.personalInfo.imageUrl} 
-                alt="Profile" 
-                className="w-32 h-32 object-cover border-4 border-white mb-4" 
-                style={{ borderRadius: 'var(--radius)' }}
-              />
-            )}
+            <div className="mb-4">
+               <ProfileImage />
+            </div>
             <h2 className="text-2xl font-bold break-words w-full" style={{ fontFamily: 'var(--font-head)' }}>{data.personalInfo.title}</h2>
           </div>
 
@@ -203,15 +234,7 @@ export const TemplateRenderer: React.FC<Props> = ({ data, config, setCVData, isE
     <div className="min-h-[1123px] w-full flex flex-col" style={styleVars}>
        <div className="h-48 w-full relative shrink-0" style={{ backgroundColor: 'var(--primary)' }}>
           <div className="absolute -bottom-12 left-12">
-             {data.personalInfo.imageUrl ? (
-               <img 
-                  src={data.personalInfo.imageUrl} 
-                  className="w-32 h-32 border-4 border-white shadow-lg object-cover" 
-                  style={{ borderRadius: 'var(--radius)' }}
-                />
-             ) : (
-                <div className="w-32 h-32 bg-gray-300 border-4 border-white shadow-lg flex items-center justify-center" style={{ borderRadius: 'var(--radius)' }}>No Img</div>
-             )}
+             <ProfileImage />
           </div>
        </div>
        

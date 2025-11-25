@@ -34,7 +34,7 @@ export const DynamicTable: React.FC<Props> = ({ table, onEdit, onDelete, isEditi
          )}
        </div>
 
-      <div className="overflow-x-auto" style={{ borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      <div className="overflow-x-auto" style={{ borderRadius: 'var(--radius)', overflow: 'hidden', border: `1px solid ${table.styles?.borderColor || 'transparent'}` }}>
         <table className="w-full text-sm text-left border-collapse" style={{ color: textColor }}>
           <thead>
             <tr style={{ backgroundColor: headerBg, color: headerText }}>

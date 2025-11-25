@@ -1,8 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { CVData, AppConfig, DynamicTableData, TRANSLATIONS } from './types';
+import { CVData, AppConfig, DynamicTableData, TRANSLATIONS, ImageStyle } from './types';
 import { TemplateRenderer } from './components/TemplateRenderer';
 import { TableEditorModal } from './components/TableEditorModal';
+import { ImageSettingsModal } from './components/ImageSettingsModal';
 import { Download, Upload, Plus, Palette, Grid, Type, Bot, Settings, Menu, X, Save, FileJson, FileSpreadsheet, Globe, ZoomIn, ZoomOut, Maximize, Sliders, ChevronDown } from 'lucide-react';
 import { improveText, suggestTemplateFromImage } from './services/geminiService';
 import * as XLSX from 'xlsx';
@@ -70,6 +71,7 @@ const App: React.FC = () => {
   
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
   const [editingTableIndex, setEditingTableIndex] = useState<number | null>(null);
 
   // Scaling State
@@ -127,10 +129,18 @@ const App: React.FC = () => {
   // Handle PDF Download
   const handlePrint = () => {
     try {
+        console.log("Starting PDF generation...");
+        // Ensure the print engine is triggered
+        if (window.matchMedia) {
+            const mediaQueryList = window.matchMedia('print');
+            mediaQueryList.addListener((mql) => {
+                if (mql.matches) console.log('Print media active');
+            });
+        }
         window.print();
     } catch (e) {
         console.error("Print Error:", e);
-        alert("There was an error generating the PDF. Please check the console.");
+        alert("There was an error generating the PDF. Please check the console (F12) for details.");
     }
   };
 
@@ -285,6 +295,17 @@ const App: React.FC = () => {
       setEditingTableIndex(null);
   };
 
+  // Update image style
+  const updateImageStyle = (style: ImageStyle) => {
+    setCVData(prev => ({
+        ...prev,
+        personalInfo: {
+            ...prev.personalInfo,
+            imageStyle: style
+        }
+    }));
+  };
+
   // Improved Scale Calculation
   useEffect(() => {
     if (!previewContainerRef.current) return;
@@ -325,7 +346,7 @@ const App: React.FC = () => {
       <div className="md:hidden bg-white p-4 shadow flex justify-between items-center z-50 sticky top-0 print:hidden">
           <h1 className="font-bold text-lg">{t.appTitle}</h1>
           <div className="flex items-center gap-2">
-            <button onClick={() => setConfig({...config, language: config.language === 'en' ? 'si' : 'en'})} className="p-2 bg-gray-100 rounded-full text-xs font-bold flex gap-1">
+            <button onClick={() => setConfig({...config, language: config.language === 'en' ? 'si' : 'en'})} className="p-2 bg-gray-100 rounded-full text-xs font-bold flex gap-1 text-gray-900">
                 <Globe size={14}/> {config.language.toUpperCase()}
             </button>
             <button onClick={() => setShowMobileMenu(!showMobileMenu)}>{showMobileMenu ? <X/> : <Menu/>}</button>
@@ -369,7 +390,7 @@ const App: React.FC = () => {
                         <h3 className="font-bold text-gray-700">{t.personalInfo}</h3>
                         <div className="flex gap-2">
                            <div className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden shrink-0 relative cursor-pointer group">
-                               {cvData.personalInfo.imageUrl ? <img src={cvData.personalInfo.imageUrl} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-xs">Photo</div>}
+                               {cvData.personalInfo.imageUrl ? <img src={cvData.personalInfo.imageUrl} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-xs text-gray-500">Photo</div>}
                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleProfileImage} accept="image/*" />
                                <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white text-xs">Edit</div>
                            </div>
@@ -666,6 +687,7 @@ const App: React.FC = () => {
                       setCVData={setCVData} 
                       isEditing={isEditing} 
                       onEditTable={handleEditTable}
+                      onEditImage={() => setImageModalOpen(true)}
                   />
               </div>
           </div>
@@ -678,6 +700,14 @@ const App: React.FC = () => {
           table={editingTableIndex !== null ? cvData.customTables[editingTableIndex] : null}
           onSave={saveTableFromModal}
           lang={config.language}
+      />
+
+      {/* Image Settings Modal */}
+      <ImageSettingsModal
+        isOpen={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        imageStyle={cvData.personalInfo.imageStyle || { borderRadius: 0, borderWidth: 4, borderColor: '#ffffff' }}
+        onSave={updateImageStyle}
       />
 
       {/* Loading Overlay */}

@@ -33,6 +33,12 @@ export interface Skill {
   level: number; // 1-5
 }
 
+export interface ImageStyle {
+    borderRadius: number; // 0-50 percentage
+    borderWidth: number; // px
+    borderColor: string;
+}
+
 export interface CVData {
   personalInfo: {
     fullName: string;
@@ -43,6 +49,7 @@ export interface CVData {
     linkedin: string;
     summary: string;
     imageUrl?: string;
+    imageStyle?: ImageStyle;
   };
   experience: Experience[];
   education: Education[];
