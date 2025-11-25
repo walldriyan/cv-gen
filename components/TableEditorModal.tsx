@@ -1,7 +1,8 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { DynamicTableData, TRANSLATIONS, AppConfig } from '../types';
-import { X, Plus, Trash2, GripVertical, Palette } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, Palette, Eye } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -133,70 +134,94 @@ export const TableEditorModal: React.FC<Props> = ({ isOpen, onClose, table, onSa
              </>
           ) : (
             /* STYLING TAB */
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-4">
-                     <div>
-                         <label className="block text-xs font-bold text-gray-700 mb-1">{t.headerBg}</label>
-                         <div className="flex items-center gap-2">
-                             <input 
-                                type="color" 
-                                value={editingTable.styles?.headerBg || '#3b82f6'} 
-                                onChange={(e) => setEditingTable({
-                                    ...editingTable, 
-                                    styles: {...editingTable.styles, headerBg: e.target.value}
-                                })} 
-                                className="h-8 w-16 border rounded cursor-pointer"
-                             />
-                             <span className="text-xs text-gray-500">{editingTable.styles?.headerBg}</span>
-                         </div>
-                     </div>
-                     <div>
-                         <label className="block text-xs font-bold text-gray-700 mb-1">Header Text Color</label>
-                         <div className="flex items-center gap-2">
-                             <input 
-                                type="color" 
-                                value={editingTable.styles?.headerText || '#ffffff'} 
-                                onChange={(e) => setEditingTable({
-                                    ...editingTable, 
-                                    styles: {...editingTable.styles, headerText: e.target.value}
-                                })} 
-                                className="h-8 w-16 border rounded cursor-pointer"
-                             />
-                         </div>
+             <div className="flex flex-col gap-6">
+                 {/* PREVIEW AREA */}
+                 <div className="p-4 border rounded-lg bg-gray-50">
+                     <h4 className="text-xs font-bold text-gray-500 mb-2 uppercase flex items-center gap-2"><Eye size={12}/> Live Preview</h4>
+                     <div className="overflow-hidden rounded-lg shadow-sm" style={{ border: `1px solid ${editingTable.styles?.borderColor || '#e5e7eb'}` }}>
+                         <table className="w-full text-sm">
+                             <thead>
+                                 <tr style={{ backgroundColor: editingTable.styles?.headerBg || '#3b82f6', color: editingTable.styles?.headerText || '#ffffff' }}>
+                                     <th className="p-2 border-r" style={{ borderColor: 'rgba(255,255,255,0.2)' }}>Header 1</th>
+                                     <th className="p-2">Header 2</th>
+                                 </tr>
+                             </thead>
+                             <tbody style={{ color: editingTable.styles?.textColor || 'inherit' }}>
+                                 <tr>
+                                     <td className="p-2 border-r border-b" style={{ borderColor: editingTable.styles?.borderColor || '#e5e7eb' }}>Cell 1</td>
+                                     <td className="p-2 border-b" style={{ borderColor: editingTable.styles?.borderColor || '#e5e7eb' }}>Cell 2</td>
+                                 </tr>
+                                 <tr style={{ backgroundColor: 'rgba(0,0,0,0.02)' }}>
+                                     <td className="p-2 border-r" style={{ borderColor: editingTable.styles?.borderColor || '#e5e7eb' }}>Cell 3</td>
+                                     <td className="p-2" style={{ borderColor: editingTable.styles?.borderColor || '#e5e7eb' }}>Cell 4</td>
+                                 </tr>
+                             </tbody>
+                         </table>
                      </div>
                  </div>
-                 <div className="space-y-4">
-                    <div>
-                         <label className="block text-xs font-bold text-gray-700 mb-1">{t.borderColor}</label>
-                         <div className="flex items-center gap-2">
-                             <input 
-                                type="color" 
-                                value={editingTable.styles?.borderColor || '#e5e7eb'} 
-                                onChange={(e) => setEditingTable({
-                                    ...editingTable, 
-                                    styles: {...editingTable.styles, borderColor: e.target.value}
-                                })} 
-                                className="h-8 w-16 border rounded cursor-pointer"
-                             />
-                         </div>
-                     </div>
-                     <div>
-                         <label className="block text-xs font-bold text-gray-700 mb-1">Row Text Color</label>
-                         <div className="flex items-center gap-2">
-                             <input 
-                                type="color" 
-                                value={editingTable.styles?.textColor || '#000000'} 
-                                onChange={(e) => setEditingTable({
-                                    ...editingTable, 
-                                    styles: {...editingTable.styles, textColor: e.target.value}
-                                })} 
-                                className="h-8 w-16 border rounded cursor-pointer"
-                             />
-                         </div>
-                     </div>
-                 </div>
-                 <div className="col-span-full p-4 bg-gray-50 rounded text-center text-xs text-gray-500">
-                     Tip: You can set distinct colors for each table in your CV.
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">{t.headerBg}</label>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="color" 
+                                    value={editingTable.styles?.headerBg || '#3b82f6'} 
+                                    onChange={(e) => setEditingTable({
+                                        ...editingTable, 
+                                        styles: {...editingTable.styles, headerBg: e.target.value}
+                                    })} 
+                                    className="h-8 w-16 border rounded cursor-pointer"
+                                />
+                                <span className="text-xs text-gray-500">{editingTable.styles?.headerBg}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Header Text Color</label>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="color" 
+                                    value={editingTable.styles?.headerText || '#ffffff'} 
+                                    onChange={(e) => setEditingTable({
+                                        ...editingTable, 
+                                        styles: {...editingTable.styles, headerText: e.target.value}
+                                    })} 
+                                    className="h-8 w-16 border rounded cursor-pointer"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">{t.borderColor}</label>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="color" 
+                                    value={editingTable.styles?.borderColor || '#e5e7eb'} 
+                                    onChange={(e) => setEditingTable({
+                                        ...editingTable, 
+                                        styles: {...editingTable.styles, borderColor: e.target.value}
+                                    })} 
+                                    className="h-8 w-16 border rounded cursor-pointer"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Row Text Color</label>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="color" 
+                                    value={editingTable.styles?.textColor || '#000000'} 
+                                    onChange={(e) => setEditingTable({
+                                        ...editingTable, 
+                                        styles: {...editingTable.styles, textColor: e.target.value}
+                                    })} 
+                                    className="h-8 w-16 border rounded cursor-pointer"
+                                />
+                            </div>
+                        </div>
+                    </div>
                  </div>
              </div>
           )}

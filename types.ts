@@ -64,6 +64,10 @@ export interface SectionStyle {
     // Decorations (Lines/Steppers)
     lineColor?: string;
     lineWidth?: number; // px for borders/lines
+    
+    // Items (Tags, Pills, Sub-elements)
+    itemBackgroundColor?: string;
+    itemTextColor?: string;
 }
 
 export interface CVData {
@@ -95,6 +99,8 @@ export interface ColorProfile {
         text: string;
         background: string;
         heading: string;
+        tagBackground?: string;
+        tagText?: string;
     };
 }
 
@@ -122,6 +128,8 @@ export interface AppConfig {
       text: string;
       background: string;
       heading: string; // Separate color for headings
+      tagBackground?: string; // New: Global tag background
+      tagText?: string; // New: Global tag text
   };
   // Advanced Fonts
   fonts: {
@@ -224,3 +232,13 @@ export const TRANSLATIONS = {
     lineStyle: "ඉරි සහ හැඩතල"
   }
 };
+
+declare global {
+  interface Window {
+    html2pdf?: () => {
+      set: (options: any) => any;
+      from: (element: HTMLElement) => any;
+      save: () => Promise<void>;
+    };
+  }
+}

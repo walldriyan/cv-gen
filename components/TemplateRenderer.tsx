@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useMemo, useCallback } from 'react';
 import { CVData, AppConfig, DynamicTableData } from '../types';
 import { DynamicTable } from './DynamicTable';
 import { SectionWrapper } from './SectionWrapper';
@@ -24,12 +25,12 @@ export const TemplateRenderer: React.FC<Props> = ({
     onEditSectionStyle
 }) => {
   
-  const deleteTable = (index: number) => {
+  const deleteTable = useCallback((index: number) => {
     if(window.confirm("Are you sure you want to delete this table?")) {
         const newTables = data.customTables.filter((_, i) => i !== index);
         setCVData({ ...data, customTables: newTables });
     }
-  };
+  }, [data, setCVData]);
 
   // Convert spacing level to REM units
   const getSpacing = () => {
@@ -43,7 +44,7 @@ export const TemplateRenderer: React.FC<Props> = ({
   // GLOBAL CSS VARIABLES
   // These provide the default values for the entire document.
   // Individual sections can override them via SectionWrapper.
-  const styleVars = {
+  const styleVars = useMemo(() => ({
     // Colors
     '--primary': config.colors.primary,
     '--secondary': config.colors.secondary,
@@ -61,6 +62,10 @@ export const TemplateRenderer: React.FC<Props> = ({
     '--global-border-color': config.globalDesign?.borderColor || config.colors.secondary,
     '--global-border-style': config.globalDesign?.borderStyle || 'solid',
     
+    // Global Tag/Item Colors
+    '--item-bg': config.colors.tagBackground || config.colors.primary,
+    '--item-text': config.colors.tagText || '#ffffff',
+
     // Layout
     '--spacing': getSpacing(),
     '--radius': `${config.globalDesign?.borderRadius ?? config.borderRadius}px`,
@@ -69,16 +74,17 @@ export const TemplateRenderer: React.FC<Props> = ({
     '--scale-head': config.globalDesign?.headingScale || 1,
     '--scale-body': config.globalDesign?.bodyScale || 1,
 
-  } as React.CSSProperties;
+  } as React.CSSProperties), [config]);
 
   // Custom Image Style
-  const imgStyle = data.personalInfo.imageStyle 
+  const imgStyle = useMemo(() => data.personalInfo.imageStyle 
     ? { 
         borderRadius: `${data.personalInfo.imageStyle.borderRadius}%`,
         borderWidth: `${data.personalInfo.imageStyle.borderWidth}px`,
         borderColor: data.personalInfo.imageStyle.borderColor
       }
-    : { borderRadius: 'var(--radius)', borderWidth: '4px', borderColor: 'white' };
+    : { borderRadius: 'var(--radius)', borderWidth: '4px', borderColor: 'white' },
+    [data.personalInfo.imageStyle]);
 
   const ProfileImage = () => (
       <div className="relative group inline-block">
@@ -198,7 +204,7 @@ export const TemplateRenderer: React.FC<Props> = ({
               <h1 className="font-bold uppercase tracking-tight break-words" style={{ fontSize: 'calc(3rem * var(--scale-head))', color: 'var(--sec-heading-color, var(--text-head))', fontFamily: 'var(--font-head)' }}>
                 {data.personalInfo.fullName}
               </h1>
-              <p className="mt-4 leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--secondary)' }}>{data.personalInfo.summary}</p>
+              <p className="mt-4 leading-relaxed whitespace-pre-wrap" style={{ color: 'inherit', opacity: 0.9 }}>{data.personalInfo.summary}</p>
            </SectionWrapper>
 
            <SectionWrapper
@@ -219,7 +225,7 @@ export const TemplateRenderer: React.FC<Props> = ({
               {data.experience.map(exp => (
                  <div key={exp.id} className="mb-4 last:mb-0" style={{ marginBottom: 'var(--sec-margin-bottom, var(--spacing))' }}>
                     <h4 className="font-bold text-lg" style={{ color: 'var(--sec-heading-color, var(--text-head))' }}>{exp.role}</h4>
-                    <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--secondary)' }}>
+                    <div className="flex justify-between text-sm mb-2" style={{ color: 'inherit', opacity: 0.8 }}>
                        <span className="font-semibold">{exp.company}</span>
                        <span>{exp.duration}</span>
                     </div>
@@ -245,7 +251,7 @@ export const TemplateRenderer: React.FC<Props> = ({
               {data.education.map(edu => (
                  <div key={edu.id} className="mb-3 last:mb-0" style={{ marginBottom: 'calc(var(--sec-margin-bottom, var(--spacing)) * 0.5)' }}>
                     <h4 className="font-bold" style={{ color: 'var(--sec-heading-color, var(--text-head))' }}>{edu.degree}</h4>
-                    <div className="text-sm" style={{ color: 'var(--secondary)' }}>{edu.school}, {edu.year}</div>
+                    <div className="text-sm" style={{ color: 'inherit', opacity: 0.8 }}>{edu.school}, {edu.year}</div>
                  </div>
               ))}
            </SectionWrapper>
@@ -287,8 +293,8 @@ export const TemplateRenderer: React.FC<Props> = ({
                 }}
             >
                 <h1 className="font-bold uppercase mb-2" style={{ fontSize: 'calc(2.5rem * var(--scale-head))', fontFamily: 'var(--font-head)', color: 'var(--sec-heading-color, var(--text-head))' }}>{data.personalInfo.fullName}</h1>
-                <p className="text-lg tracking-widest mb-2" style={{ color: 'var(--secondary)' }}>{data.personalInfo.title}</p>
-                <div className="flex justify-center flex-wrap gap-4 text-sm" style={{ color: 'var(--secondary)' }}>
+                <p className="text-lg tracking-widest mb-2" style={{ color: 'inherit', opacity: 0.8 }}>{data.personalInfo.title}</p>
+                <div className="flex justify-center flex-wrap gap-4 text-sm" style={{ color: 'inherit', opacity: 0.8 }}>
                     <span>{data.personalInfo.email}</span> | <span>{data.personalInfo.phone}</span> | <span>{data.personalInfo.address}</span>
                 </div>
             </SectionWrapper>
@@ -300,7 +306,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                 styles={data.sectionStyles['classic_summary']}
                 className="mb-6"
             >
-                <p className="text-center italic max-w-xl mx-auto whitespace-pre-wrap" style={{ color: 'var(--secondary)' }}>{data.personalInfo.summary}</p>
+                <p className="text-center italic max-w-xl mx-auto whitespace-pre-wrap" style={{ color: 'inherit' }}>{data.personalInfo.summary}</p>
             </SectionWrapper>
 
             <div className="grid grid-cols-1" style={{ gap: 'var(--spacing)' }}>
@@ -400,9 +406,9 @@ export const TemplateRenderer: React.FC<Props> = ({
           >
              <div>
                 <h1 className="font-bold break-words" style={{ fontSize: 'calc(3rem * var(--scale-head))', fontFamily: 'var(--font-head)', color: 'var(--sec-heading-color, var(--text-head))' }}>{data.personalInfo.fullName}</h1>
-                <p className="text-2xl mt-1" style={{ color: 'var(--secondary)' }}>{data.personalInfo.title}</p>
+                <p className="text-2xl mt-1" style={{ color: 'inherit', opacity: 0.8 }}>{data.personalInfo.title}</p>
              </div>
-             <div className="text-right text-sm space-y-1" style={{ color: 'var(--secondary)' }}>
+             <div className="text-right text-sm space-y-1" style={{ color: 'inherit', opacity: 0.8 }}>
                 <div className="flex justify-end items-center gap-2">{data.personalInfo.email} <Mail size={14}/></div>
                 <div className="flex justify-end items-center gap-2">{data.personalInfo.phone} <Phone size={14}/></div>
                 <div className="flex justify-end items-center gap-2">{data.personalInfo.address} <MapPin size={14}/></div>
@@ -425,7 +431,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                           height: '32px'
                       }}></span> Profile
                    </h3>
-                   <p className="leading-relaxed whitespace-pre-wrap">{data.personalInfo.summary}</p>
+                   <p className="leading-relaxed whitespace-pre-wrap" style={{ color: 'inherit' }}>{data.personalInfo.summary}</p>
                 </SectionWrapper>
 
                 <SectionWrapper
@@ -460,7 +466,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                         }}></div>
                          <h4 className="font-bold text-lg" style={{ color: 'var(--sec-heading-color, var(--text-head))' }}>{exp.role}</h4>
                          <div className="text-sm font-semibold mb-2" style={{ color: 'var(--primary)' }}>{exp.company} | {exp.duration}</div>
-                         <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--secondary)' }}>{exp.description}</p>
+                         <p className="text-sm whitespace-pre-wrap" style={{ color: 'inherit', opacity: 0.9 }}>{exp.description}</p>
                       </div>
                    ))}
                 </SectionWrapper>
@@ -493,7 +499,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                         {data.education.map(edu => (
                         <div key={edu.id} className="mb-4">
                             <div className="font-bold">{edu.degree}</div>
-                            <div className="text-sm" style={{ color: 'var(--secondary)' }}>{edu.school}</div>
+                            <div className="text-sm" style={{ color: 'inherit', opacity: 0.8 }}>{edu.school}</div>
                             <div className="text-xs inline-block px-2 py-1 rounded mt-1" style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}>{edu.year}</div>
                         </div>
                         ))}
@@ -503,7 +509,11 @@ export const TemplateRenderer: React.FC<Props> = ({
                         <h3 className="font-bold text-lg mb-4 uppercase" style={{ color: 'var(--sec-heading-color, var(--secondary))', fontFamily: 'var(--font-head)' }}>Skills</h3>
                         <div className="flex flex-wrap gap-2">
                         {data.skills.map(skill => (
-                            <span key={skill.id} className="px-3 py-1 text-sm text-white shadow-sm" style={{ backgroundColor: 'var(--primary)', borderRadius: 'calc(var(--radius) + 4px)' }}>
+                            <span key={skill.id} className="px-3 py-1 text-sm shadow-sm font-medium" style={{ 
+                                backgroundColor: 'var(--item-bg, var(--primary))', // Use global item bg
+                                color: 'var(--item-text, white)', // Use global item text
+                                borderRadius: 'calc(var(--radius) + 4px)' 
+                            }}>
                                 {skill.name}
                             </span>
                         ))}

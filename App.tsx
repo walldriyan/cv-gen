@@ -1,12 +1,10 @@
-
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { CVData, AppConfig, DynamicTableData, TRANSLATIONS, ImageStyle, SectionStyle, ColorProfile } from './types';
 import { TemplateRenderer } from './components/TemplateRenderer';
 import { TableEditorModal } from './components/TableEditorModal';
 import { ImageSettingsModal } from './components/ImageSettingsModal';
 import { StyleEditorModal } from './components/StyleEditorModal';
-import { Download, Upload, Plus, Palette, Grid, Type, Bot, Settings, Menu, X, Save, FileJson, FileSpreadsheet, Globe, ZoomIn, ZoomOut, Maximize, Sliders, ChevronDown, Loader2, Trash2, FolderOpen, Share, Layout, Scaling } from 'lucide-react';
+import { Download, Upload, Plus, Palette, Grid, Type, Bot, Settings, Menu, X, Save, FileJson, FileSpreadsheet, Globe, ZoomIn, ZoomOut, Maximize, Sliders, ChevronDown, Loader2, Trash2, FolderOpen, Share, Layout, Scaling, Tag } from 'lucide-react';
 import { improveText, suggestTemplateFromImage } from './services/geminiService';
 import * as XLSX from 'xlsx';
 
@@ -46,23 +44,31 @@ const FONTS = [
 const DEFAULT_PROFILES: ColorProfile[] = [
     {
         id: 'default_blue', name: 'Modern Blue (Default)',
-        colors: { primary: '#3b82f6', secondary: '#4b5563', text: '#111827', background: '#ffffff', heading: '#3b82f6' }
+        colors: { 
+            primary: '#2563eb', 
+            secondary: '#475569', 
+            text: '#0f172a', 
+            background: '#f8fafc', // Light slate background instead of white
+            heading: '#1e40af', 
+            tagBackground: '#2563eb', 
+            tagText: '#ffffff' 
+        }
     },
     {
         id: 'emerald_green', name: 'Emerald Professional',
-        colors: { primary: '#059669', secondary: '#374151', text: '#111827', background: '#ffffff', heading: '#047857' }
+        colors: { primary: '#059669', secondary: '#374151', text: '#111827', background: '#ffffff', heading: '#047857', tagBackground: '#059669', tagText: '#ffffff' }
     },
     {
         id: 'crimson_bold', name: 'Crimson Bold',
-        colors: { primary: '#dc2626', secondary: '#4b5563', text: '#111827', background: '#fff1f2', heading: '#b91c1c' }
+        colors: { primary: '#dc2626', secondary: '#4b5563', text: '#111827', background: '#fff1f2', heading: '#b91c1c', tagBackground: '#dc2626', tagText: '#ffffff' }
     },
     {
         id: 'slate_minimal', name: 'Slate Minimal',
-        colors: { primary: '#334155', secondary: '#64748b', text: '#0f172a', background: '#f8fafc', heading: '#1e293b' }
+        colors: { primary: '#334155', secondary: '#64748b', text: '#0f172a', background: '#f8fafc', heading: '#1e293b', tagBackground: '#334155', tagText: '#ffffff' }
     },
     {
         id: 'royal_purple', name: 'Royal Purple',
-        colors: { primary: '#7c3aed', secondary: '#6b7280', text: '#111827', background: '#ffffff', heading: '#6d28d9' }
+        colors: { primary: '#7c3aed', secondary: '#6b7280', text: '#111827', background: '#ffffff', heading: '#6d28d9', tagBackground: '#7c3aed', tagText: '#ffffff' }
     }
 ];
 
@@ -83,7 +89,7 @@ const App: React.FC = () => {
         borderRadius: 4
     },
     spacing: 2,
-    borderRadius: 4, // kept for back-compat, synched with globalDesign
+    borderRadius: 4, 
     language: 'si'
   });
   
@@ -113,6 +119,10 @@ const App: React.FC = () => {
   const [scaleMode, setScaleMode] = useState<'fit' | 'manual'>('fit');
   const [contentHeight, setContentHeight] = useState(1123);
 
+  // Persistence Timeout Ref
+  // Using number | null for browser setTimeout compatibility
+  const saveTimeoutRef = useRef<number | null>(null);
+
   const t = TRANSLATIONS[config.language];
 
   // --- LOCAL STORAGE LOGIC ---
@@ -141,6 +151,10 @@ const App: React.FC = () => {
                     borderRadius: parsedConfig.borderRadius || 4
                 };
             }
+            // Migration for tag colors
+            if (!parsedConfig.colors.tagBackground) parsedConfig.colors.tagBackground = parsedConfig.colors.primary;
+            if (!parsedConfig.colors.tagText) parsedConfig.colors.tagText = '#ffffff';
+            
             setConfig(parsedConfig);
         } catch (e) { console.error("Error loading saved config", e); }
     }
@@ -153,11 +167,32 @@ const App: React.FC = () => {
     setDataLoaded(true);
   }, []);
 
+  // Debounced Save
+  const debouncedSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = window.setTimeout(() => {
+        try {
+            localStorage.setItem('cv_builder_data', JSON.stringify(cvData));
+            localStorage.setItem('cv_builder_config', JSON.stringify(config));
+        } catch (error) {
+            console.error('Failed to save to localStorage:', error);
+        }
+    }, 1000); 
+  }, [cvData, config]);
+
   useEffect(() => {
       if (!dataLoaded) return;
-      localStorage.setItem('cv_builder_data', JSON.stringify(cvData));
-      localStorage.setItem('cv_builder_config', JSON.stringify(config));
-  }, [cvData, config, dataLoaded]);
+      debouncedSave();
+      
+      return () => {
+          if (saveTimeoutRef.current) {
+              clearTimeout(saveTimeoutRef.current);
+          }
+      };
+  }, [cvData, config, dataLoaded, debouncedSave]);
 
   // Persist Custom Profiles
   useEffect(() => {
@@ -167,23 +202,35 @@ const App: React.FC = () => {
   }, [profiles, dataLoaded]);
 
 
-  // Monitor Content Height for resizing
+  // Monitor Content Height for resizing (Optimized)
   useEffect(() => {
     if (!cvContentRef.current) return;
-    const observer = new ResizeObserver(() => {
-      if (cvContentRef.current) {
-        const newHeight = cvContentRef.current.offsetHeight;
-        setContentHeight(prev => {
-            if (Math.abs(prev - newHeight) > 1) return newHeight;
-            return prev;
-        });
-      }
+    
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const element = cvContentRef.current; 
+    
+    const observer = new ResizeObserver((entries) => {
+        // Debounce the updates
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            if (!element) return;
+            const newHeight = element.offsetHeight;
+            setContentHeight(prev => {
+                if (Math.abs(prev - newHeight) > 5) return newHeight;
+                return prev;
+            });
+        }, 100); 
     });
-    observer.observe(cvContentRef.current);
-    return () => observer.disconnect();
-  }, [cvData, config]);
+    
+    observer.observe(element);
+    
+    return () => {
+        clearTimeout(timeoutId);
+        observer.disconnect();
+    };
+  }, []); // Empty deps - only mount/unmount
 
-  // --- PDF GENERATION HANDLER (html2pdf) ---
+  // --- PDF GENERATION HANDLER (IFRAME METHOD) ---
   const handlePrint = async () => {
     const element = cvContentRef.current;
     if (!element) {
@@ -193,59 +240,127 @@ const App: React.FC = () => {
 
     setIsGeneratingPdf(true);
 
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.top = '0';
-    container.style.left = '0';
-    container.style.width = '100vw';
-    container.style.height = '100vh';
-    container.style.zIndex = '99999';
-    container.style.backgroundColor = '#ffffff';
-    container.style.display = 'flex';
-    container.style.justifyContent = 'center';
-    container.style.alignItems = 'flex-start';
-    container.style.overflow = 'auto';
-    document.body.appendChild(container);
-
-    const clone = element.cloneNode(true) as HTMLElement;
-    
-    clone.style.transform = 'none';
-    clone.style.margin = '0';
-    clone.style.boxShadow = 'none';
-    clone.style.width = '210mm'; 
-    const noPrints = clone.querySelectorAll('.no-print');
-    noPrints.forEach((el: any) => el.style.display = 'none');
-
-    container.appendChild(clone);
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const opt = {
-      margin: 0,
-      filename: `${cvData.personalInfo.fullName.replace(/\s+/g, '_')}_CV.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          scrollY: 0,
-          letterRendering: true,
-          windowWidth: 794 
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
     try {
+        // 1. Create a hidden Iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '-9999px';
+        iframe.style.left = '-9999px';
+        iframe.style.width = '794px'; // A4 width
+        iframe.style.height = '1200px';
+        iframe.style.border = 'none';
+        iframe.style.zIndex = '-1';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow?.document;
+        if (!doc) throw new Error("Iframe document not found");
+
+        // 2. Prepare HTML content
+        // Inject Tailwind CDN
+        const tailwindCDN = `<script src="https://cdn.tailwindcss.com"></script>`;
+        // Extract font links from current head
+        const fontLinks = document.querySelector('head')?.innerHTML.match(/<link[^>]*fonts\.googleapis[^>]*>/g)?.join('') || '';
+        
+        // Extract computed CSS variables from the main CV container
+        // This ensures all the dynamic theme colors are transferred
+        const computedStyle = window.getComputedStyle(element);
+        let cssVars = '';
+        for (let i = 0; i < computedStyle.length; i++) {
+            const key = computedStyle[i];
+            if (key.startsWith('--')) {
+                cssVars += `${key}: ${computedStyle.getPropertyValue(key)};\n`;
+            }
+        }
+        
+        // Get the innerHTML and className of the CV
+        const contentHTML = element.innerHTML;
+        const className = element.className;
+
+        // 3. Write complete HTML document to Iframe
+        doc.open();
+        doc.write(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="utf-8">
+                ${tailwindCDN}
+                ${fontLinks}
+                <style>
+                    body { 
+                        margin: 0; 
+                        padding: 0; 
+                        width: 794px;
+                        background: white;
+                        -webkit-print-color-adjust: exact; 
+                        print-color-adjust: exact;
+                    }
+                    .cv-wrapper {
+                        ${cssVars}
+                    }
+                    @media print {
+                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                        .no-print { display: none !important; }
+                    }
+                    /* Ensure font families are applied globally in iframe */
+                    body { font-family: 'Inter', sans-serif; }
+                </style>
+            </head>
+            <body>
+                <div class="${className} cv-wrapper" style="transform: none; margin: 0; box-shadow: none;">
+                    ${contentHTML}
+                </div>
+            </body>
+            </html>
+        `);
+        doc.close();
+
+        // 4. Wait for Resources (Tailwind & Images)
+        // Wait a bit for Tailwind script to parse and apply classes
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Wait for images inside iframe to load
+        const images = Array.from(doc.images);
+        await Promise.all(images.map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise(resolve => { 
+                img.onload = resolve; 
+                img.onerror = resolve; 
+            });
+        }));
+
+        // 5. Generate PDF using html2pdf from the iframe content
         // @ts-ignore
         if (window.html2pdf) {
+            const opt = {
+                margin: [0, 0, 0, 0], // No margin, handled by CV padding
+                filename: `${cvData.personalInfo.fullName.replace(/\s+/g, '_')}_CV.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false,
+                    scrollY: 0,
+                    scrollX: 0,
+                    windowWidth: 794,
+                    width: 794
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Capture the body of the iframe
             // @ts-ignore
-            await window.html2pdf().set(opt).from(clone).save();
+            await window.html2pdf().set(opt).from(doc.body).save();
         } else {
-            alert("PDF library is loading. Please try again in a few seconds.");
+            alert("PDF Library not loaded. Please refresh.");
         }
-    } catch (e) {
-        console.error("PDF Generation failed:", e);
-        alert("Failed to generate PDF. Please try again.");
+
+        // Cleanup
+        document.body.removeChild(iframe);
+
+    } catch (error: any) {
+        console.error("PDF Generation Error:", error);
+        alert(`Failed to generate PDF: ${error.message}`);
     } finally {
-        document.body.removeChild(container);
         setIsGeneratingPdf(false);
     }
   };
@@ -336,7 +451,10 @@ const App: React.FC = () => {
                      primary: suggestion.primaryColor,
                      secondary: suggestion.secondaryColor,
                      background: suggestion.backgroundColor,
-                     heading: suggestion.headingColor
+                     heading: suggestion.headingColor,
+                     // Use primary for tags if not specified
+                     tagBackground: suggestion.primaryColor,
+                     tagText: '#ffffff'
                  },
                  fonts: {
                      ...prev.fonts,
@@ -502,36 +620,49 @@ const App: React.FC = () => {
       e.target.value = ''; // Reset input
   };
 
-  // Improved Scale Calculation
+  // Improved Scale Calculation (Optimized)
   useEffect(() => {
     if (!previewContainerRef.current) return;
-    let timeoutId: any;
+    
+    let rafId: number;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const container = previewContainerRef.current;
 
     const handleResize = () => {
-        if (scaleMode === 'manual') return;
-        if (!previewContainerRef.current) return;
+        // Cancel previous RAF
+        if (rafId) cancelAnimationFrame(rafId);
         
-        const containerWidth = previewContainerRef.current.clientWidth;
-        const a4WidthPx = 794; 
-        const paddingPx = containerWidth < 768 ? 20 : 48; 
+        rafId = requestAnimationFrame(() => {
+            if (scaleMode === 'manual' || !container) return;
+            
+            const containerWidth = container.clientWidth;
+            const a4WidthPx = 794; 
+            const paddingPx = containerWidth < 768 ? 20 : 48; 
 
-        let computedScale = (containerWidth - paddingPx) / a4WidthPx;
-        computedScale = Math.min(Math.max(computedScale, 0.2), 1.5);
-        
-        setPreviewScale(computedScale);
+            let computedScale = (containerWidth - paddingPx) / a4WidthPx;
+            computedScale = Math.min(Math.max(computedScale, 0.2), 1.5);
+            
+            setPreviewScale(prev => {
+                // Prevent unnecessary updates
+                if (Math.abs(prev - computedScale) < 0.01) return prev;
+                return computedScale;
+            });
+        });
     };
 
-    const resizeObserver = new ResizeObserver(() => {
+    const debouncedResize = () => {
         clearTimeout(timeoutId);
-        timeoutId = setTimeout(handleResize, 50);
-    });
-    
-    resizeObserver.observe(previewContainerRef.current);
-    handleResize();
+        timeoutId = setTimeout(handleResize, 150);
+    };
+
+    const resizeObserver = new ResizeObserver(debouncedResize);
+    resizeObserver.observe(container);
+    handleResize(); // Initial calculation
 
     return () => {
         resizeObserver.disconnect();
         clearTimeout(timeoutId);
+        if (rafId) cancelAnimationFrame(rafId);
     };
   }, [scaleMode]); 
 
@@ -946,6 +1077,18 @@ const App: React.FC = () => {
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs text-gray-900">Background</span>
                                         <input type="color" value={config.colors.background} onChange={e => setConfig({...config, colors: {...config.colors, background: e.target.value}})} className="h-6 w-10 border rounded cursor-pointer"/>
+                                    </div>
+                                    
+                                    <div className="border-t my-2 pt-2">
+                                        <div className="text-[10px] font-bold text-gray-500 mb-2 uppercase">Tags & Items</div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs text-gray-900">Tag Background</span>
+                                            <input type="color" value={config.colors.tagBackground || config.colors.primary} onChange={e => setConfig({...config, colors: {...config.colors, tagBackground: e.target.value}})} className="h-6 w-10 border rounded cursor-pointer"/>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-gray-900">Tag Text</span>
+                                            <input type="color" value={config.colors.tagText || '#ffffff'} onChange={e => setConfig({...config, colors: {...config.colors, tagText: e.target.value}})} className="h-6 w-10 border rounded cursor-pointer"/>
+                                        </div>
                                     </div>
                                 </div>
                             </section>

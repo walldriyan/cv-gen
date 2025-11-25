@@ -1,9 +1,7 @@
 
 
-
-
 import React, { useState } from 'react';
-import { X, RefreshCcw, Type, Layout, PaintBucket, Scaling } from 'lucide-react';
+import { X, RefreshCcw, Type, Layout, PaintBucket, Scaling, Tag } from 'lucide-react';
 import { SectionStyle } from '../types';
 
 interface Props {
@@ -17,7 +15,7 @@ interface Props {
 export const StyleEditorModal: React.FC<Props> = ({ isOpen, onClose, sectionId, currentStyle, onSave }) => {
   if (!isOpen) return null;
   
-  const [activeTab, setActiveTab] = useState<'text' | 'bg' | 'border' | 'layout'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'bg' | 'border' | 'layout' | 'items'>('text');
 
   const handleReset = () => {
     onSave(sectionId, {});
@@ -30,7 +28,8 @@ export const StyleEditorModal: React.FC<Props> = ({ isOpen, onClose, sectionId, 
   const tabs = [
       { id: 'text', label: 'Text', icon: <Type size={16}/> },
       { id: 'bg', label: 'Background', icon: <PaintBucket size={16}/> },
-      { id: 'border', label: 'Lines & Borders', icon: <Scaling size={16}/> },
+      { id: 'border', label: 'Lines', icon: <Scaling size={16}/> },
+      { id: 'items', label: 'Items', icon: <Tag size={16}/> },
       { id: 'layout', label: 'Spacing', icon: <Layout size={16}/> },
   ];
 
@@ -250,6 +249,41 @@ export const StyleEditorModal: React.FC<Props> = ({ isOpen, onClose, sectionId, 
                             <button onClick={() => updateStyle('lineColor', undefined)} className="text-xs text-red-500 hover:underline">Clear</button>
                          </div>
                          <p className="text-[10px] text-gray-500 mt-1">Controls sidebar lines and skill bars</p>
+                    </div>
+                 </div>
+              </div>
+          )}
+
+          {/* --- ITEMS TAB --- */}
+          {activeTab === 'items' && (
+              <div className="space-y-4">
+                  <div className="p-3 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800 mb-2">
+                      Use this to style skill tags, pills, or list items within this section.
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-2">Tag/Item Background</label>
+                    <div className="flex items-center gap-2">
+                        <input 
+                            type="color" 
+                            value={currentStyle.itemBackgroundColor || '#3b82f6'} 
+                            onChange={(e) => updateStyle('itemBackgroundColor', e.target.value)}
+                            className="h-10 w-full border rounded cursor-pointer"
+                        />
+                        <button onClick={() => updateStyle('itemBackgroundColor', undefined)} className="text-xs text-red-500 hover:underline">Clear</button>
+                    </div>
+                 </div>
+
+                 <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-2">Tag/Item Text Color</label>
+                    <div className="flex items-center gap-2">
+                        <input 
+                            type="color" 
+                            value={currentStyle.itemTextColor || '#ffffff'} 
+                            onChange={(e) => updateStyle('itemTextColor', e.target.value)}
+                            className="h-10 w-full border rounded cursor-pointer"
+                        />
+                        <button onClick={() => updateStyle('itemTextColor', undefined)} className="text-xs text-red-500 hover:underline">Clear</button>
                     </div>
                  </div>
               </div>

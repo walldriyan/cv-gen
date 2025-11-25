@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { Settings } from 'lucide-react';
 import { SectionStyle } from '../types';
@@ -25,36 +23,37 @@ export const SectionWrapper: React.FC<Props> = ({
 }) => {
   
   // Construct CSS Variables for children to consume
-  // Uses specific style if available, otherwise falls back to the CSS variable provided by parent (Global)
   const cssVariables = {
-      '--sec-line-color': styles?.lineColor, // If undefined, will fallback to var(--global-line-color) in usage
+      '--sec-line-color': styles?.lineColor, 
       '--sec-line-width': styles?.lineWidth !== undefined ? `${styles.lineWidth}px` : undefined,
       '--sec-margin-bottom': styles?.marginBottom !== undefined ? `${styles.marginBottom}px` : undefined,
       '--sec-heading-color': styles?.headingColor,
+      '--item-bg': styles?.itemBackgroundColor, 
+      '--item-text': styles?.itemTextColor,
   } as React.CSSProperties;
 
-  // Combine defaults with custom styles
+  // Combine defaults with custom styles strictly
+  // We use conditional spreading to ensure defaults persist if custom style is undefined
   const combinedStyle: React.CSSProperties = {
     ...defaultStyles,
-    backgroundColor: styles?.backgroundColor,
-    color: styles?.color,
+    ...cssVariables,
     
-    // Border
-    borderColor: styles?.borderColor, // If undefined, usually no border unless specified in class
-    borderWidth: styles?.borderWidth !== undefined ? `${styles.borderWidth}px` : undefined,
-    borderRadius: styles?.borderRadius !== undefined ? `${styles.borderRadius}px` : undefined,
-    borderStyle: styles?.borderStyle || (styles?.borderWidth ? 'solid' : undefined),
+    // Only override default if custom style is explicitly defined
+    ...(styles?.backgroundColor ? { backgroundColor: styles.backgroundColor } : {}),
+    ...(styles?.color ? { color: styles.color } : {}),
+    ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
     
-    // Layout
-    padding: styles?.padding !== undefined ? `${styles.padding}px` : undefined,
+    // Numeric values need checks for undefined, as 0 is a valid value
+    ...(styles?.borderWidth !== undefined ? { borderWidth: `${styles.borderWidth}px` } : {}),
+    ...(styles?.borderRadius !== undefined ? { borderRadius: `${styles.borderRadius}px` } : {}),
     
-    // Typography
-    // Apply font scale to the section specifically if provided
-    fontSize: styles?.fontSize ? `${styles.fontSize}em` : undefined,
-    fontWeight: styles?.fontWeight,
-    textAlign: styles?.textAlign,
-
-    ...cssVariables
+    ...(styles?.borderStyle ? { borderStyle: styles.borderStyle } : (styles?.borderWidth ? { borderStyle: 'solid' } : {})),
+    
+    ...(styles?.padding !== undefined ? { padding: `${styles.padding}px` } : {}),
+    
+    ...(styles?.fontSize ? { fontSize: `${styles.fontSize}em` } : {}),
+    ...(styles?.fontWeight ? { fontWeight: styles.fontWeight } : {}),
+    ...(styles?.textAlign ? { textAlign: styles.textAlign } : {}),
   };
 
   return (
