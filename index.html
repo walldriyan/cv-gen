@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Smart CV Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@400;700&family=Merriweather:wght@300;400;700&family=Roboto:wght@300;400;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
       /* Global Font Setting */
@@ -23,6 +22,8 @@
           margin: 0;
           padding: 0;
           font-family: 'Inter', sans-serif !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
 
         /* Hide Scrollbars */
@@ -42,6 +43,7 @@
             border: none !important;
             transform: none !important;
             overflow: visible !important;
+            display: block !important;
         }
       }
 
@@ -66,7 +68,9 @@
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.0/package/xlsx.mjs",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "jspdf": "https://esm.sh/jspdf@2.5.1"
   }
 }
 </script>

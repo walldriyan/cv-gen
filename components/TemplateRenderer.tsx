@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback } from 'react';
 import { CVData, AppConfig, DynamicTableData } from '../types';
 import { DynamicTable } from './DynamicTable';
@@ -137,7 +136,7 @@ export const TemplateRenderer: React.FC<Props> = ({
               isEditing={isEditing}
               onEdit={onEditSectionStyle}
               styles={data.sectionStyles['modern_contact']}
-              className="flex flex-col gap-4 text-sm mt-4"
+              className="flex flex-col gap-4 text-sm mt-4 break-inside-avoid"
           >
              <h3 className="font-bold border-b pb-2 uppercase tracking-widest" style={{ 
                  fontFamily: 'var(--font-head)', 
@@ -156,7 +155,7 @@ export const TemplateRenderer: React.FC<Props> = ({
               isEditing={isEditing}
               onEdit={onEditSectionStyle}
               styles={data.sectionStyles['modern_skills']}
-              className="flex flex-col gap-4 mt-4"
+              className="flex flex-col gap-4 mt-4 break-inside-avoid"
           >
              <h3 className="font-bold border-b pb-2 uppercase tracking-widest" style={{ 
                  fontFamily: 'var(--font-head)', 
@@ -223,7 +222,7 @@ export const TemplateRenderer: React.FC<Props> = ({
               }}>Experience</h3>
               
               {data.experience.map(exp => (
-                 <div key={exp.id} className="mb-4 last:mb-0" style={{ marginBottom: 'var(--sec-margin-bottom, var(--spacing))' }}>
+                 <div key={exp.id} className="mb-4 last:mb-0 break-inside-avoid" style={{ marginBottom: 'var(--sec-margin-bottom, var(--spacing))' }}>
                     <h4 className="font-bold text-lg" style={{ color: 'var(--sec-heading-color, var(--text-head))' }}>{exp.role}</h4>
                     <div className="flex justify-between text-sm mb-2" style={{ color: 'inherit', opacity: 0.8 }}>
                        <span className="font-semibold">{exp.company}</span>
@@ -249,7 +248,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                   fontFamily: 'var(--font-head)' 
               }}>Education</h3>
               {data.education.map(edu => (
-                 <div key={edu.id} className="mb-3 last:mb-0" style={{ marginBottom: 'calc(var(--sec-margin-bottom, var(--spacing)) * 0.5)' }}>
+                 <div key={edu.id} className="mb-3 last:mb-0 break-inside-avoid" style={{ marginBottom: 'calc(var(--sec-margin-bottom, var(--spacing)) * 0.5)' }}>
                     <h4 className="font-bold" style={{ color: 'var(--sec-heading-color, var(--text-head))' }}>{edu.degree}</h4>
                     <div className="text-sm" style={{ color: 'inherit', opacity: 0.8 }}>{edu.school}, {edu.year}</div>
                  </div>
@@ -258,14 +257,15 @@ export const TemplateRenderer: React.FC<Props> = ({
 
            <div>
              {data.customTables.map((table, i) => (
-                <DynamicTable 
-                    key={table.id} 
-                    table={table} 
-                    onEdit={() => onEditTable(i)} 
-                    onDelete={() => deleteTable(i)} 
-                    isEditing={isEditing}
-                    primaryColor={config.colors.primary}
-                />
+                <div key={table.id} className="break-inside-avoid">
+                    <DynamicTable 
+                        table={table} 
+                        onEdit={() => onEditTable(i)} 
+                        onDelete={() => deleteTable(i)} 
+                        isEditing={isEditing}
+                        primaryColor={config.colors.primary}
+                    />
+                </div>
              ))}
            </div>
         </SectionWrapper>
@@ -304,7 +304,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                 isEditing={isEditing}
                 onEdit={onEditSectionStyle}
                 styles={data.sectionStyles['classic_summary']}
-                className="mb-6"
+                className="mb-6 break-inside-avoid"
             >
                 <p className="text-center italic max-w-xl mx-auto whitespace-pre-wrap" style={{ color: 'inherit' }}>{data.personalInfo.summary}</p>
             </SectionWrapper>
@@ -324,7 +324,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                         color: 'var(--sec-heading-color, var(--text-head))' 
                     }}>Experience</h3>
                     {data.experience.map(exp => (
-                        <div key={exp.id} className="mb-4 last:mb-0" style={{ marginBottom: 'var(--sec-margin-bottom, 1rem)' }}>
+                        <div key={exp.id} className="mb-4 last:mb-0 break-inside-avoid" style={{ marginBottom: 'var(--sec-margin-bottom, 1rem)' }}>
                             <div className="flex justify-between font-bold">
                                 <span style={{ color: 'var(--sec-heading-color, var(--primary))' }}>{exp.company}</span>
                                 <span>{exp.duration}</span>
@@ -349,7 +349,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                          color: 'var(--sec-heading-color, var(--text-head))' 
                     }}>Education</h3>
                     {data.education.map(edu => (
-                        <div key={edu.id} className="flex justify-between mb-2" style={{ marginBottom: 'calc(var(--sec-margin-bottom, 0.5rem))' }}>
+                        <div key={edu.id} className="flex justify-between mb-2 break-inside-avoid" style={{ marginBottom: 'calc(var(--sec-margin-bottom, 0.5rem))' }}>
                             <span>{edu.school} - <span className="italic">{edu.degree}</span></span>
                             <span>{edu.year}</span>
                         </div>
@@ -364,14 +364,15 @@ export const TemplateRenderer: React.FC<Props> = ({
                         color: 'var(--sec-heading-color, var(--text-head))' 
                     }}>Additional Data</h3>}
                     {data.customTables.map((table, i) => (
-                        <DynamicTable 
-                            key={table.id} 
-                            table={table} 
-                            onEdit={() => onEditTable(i)} 
-                            onDelete={() => deleteTable(i)} 
-                            isEditing={isEditing}
-                            primaryColor={config.colors.primary}
-                        />
+                        <div key={table.id} className="break-inside-avoid">
+                            <DynamicTable 
+                                table={table} 
+                                onEdit={() => onEditTable(i)} 
+                                onDelete={() => deleteTable(i)} 
+                                isEditing={isEditing}
+                                primaryColor={config.colors.primary}
+                            />
+                        </div>
                     ))}
                 </section>
             </div>
@@ -402,7 +403,7 @@ export const TemplateRenderer: React.FC<Props> = ({
              isEditing={isEditing}
              onEdit={onEditSectionStyle}
              styles={data.sectionStyles['creative_intro']}
-             className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4"
+             className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4 break-inside-avoid"
           >
              <div>
                 <h1 className="font-bold break-words" style={{ fontSize: 'calc(3rem * var(--scale-head))', fontFamily: 'var(--font-head)', color: 'var(--sec-heading-color, var(--text-head))' }}>{data.personalInfo.fullName}</h1>
@@ -422,6 +423,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                     isEditing={isEditing}
                     onEdit={onEditSectionStyle}
                     styles={data.sectionStyles['creative_summary']}
+                    className="break-inside-avoid"
                 >
                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--sec-heading-color, var(--text-head))', fontFamily: 'var(--font-head)' }}>
                       <span className="block" style={{ 
@@ -450,7 +452,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                    </h3>
                    
                    {data.experience.map(exp => (
-                      <div key={exp.id} className="relative pl-6 mb-6 last:mb-0" style={{ 
+                      <div key={exp.id} className="relative pl-6 mb-6 last:mb-0 break-inside-avoid" style={{ 
                           borderLeftStyle: 'var(--global-border-style)' as any,
                           borderLeftColor: 'var(--sec-line-color, var(--secondary))', 
                           borderLeftWidth: 'var(--sec-line-width, var(--global-line-width))',
@@ -473,14 +475,15 @@ export const TemplateRenderer: React.FC<Props> = ({
 
                 <section>
                    {data.customTables.map((table, i) => (
-                      <DynamicTable 
-                          key={table.id} 
-                          table={table} 
-                          onEdit={() => onEditTable(i)} 
-                          onDelete={() => deleteTable(i)} 
-                          isEditing={isEditing}
-                          primaryColor={config.colors.primary}
-                      />
+                      <div key={table.id} className="break-inside-avoid">
+                        <DynamicTable 
+                            table={table} 
+                            onEdit={() => onEditTable(i)} 
+                            onDelete={() => deleteTable(i)} 
+                            isEditing={isEditing}
+                            primaryColor={config.colors.primary}
+                        />
+                      </div>
                    ))}
                 </section>
              </div>
@@ -491,7 +494,7 @@ export const TemplateRenderer: React.FC<Props> = ({
                     isEditing={isEditing}
                     onEdit={onEditSectionStyle}
                     styles={data.sectionStyles['creative_sidebar_box']}
-                    className="flex flex-col gap-6 p-6"
+                    className="flex flex-col gap-6 p-6 break-inside-avoid"
                     defaultStyles={{ backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 'var(--radius)' }}
                  >
                     <section>

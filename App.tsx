@@ -4,9 +4,11 @@ import { TemplateRenderer } from './components/TemplateRenderer';
 import { TableEditorModal } from './components/TableEditorModal';
 import { ImageSettingsModal } from './components/ImageSettingsModal';
 import { StyleEditorModal } from './components/StyleEditorModal';
-import { Download, Upload, Plus, Palette, Grid, Type, Bot, Settings, Menu, X, Save, FileJson, FileSpreadsheet, Globe, ZoomIn, ZoomOut, Maximize, Sliders, ChevronDown, Loader2, Trash2, FolderOpen, Share, Layout, Scaling, Tag } from 'lucide-react';
-import { improveText, suggestTemplateFromImage } from './services/geminiService';
+import { Download, Upload, Plus, Palette, Grid, Type, Bot, Settings, Menu, X, Save, FileJson, FileSpreadsheet, Globe, ZoomIn, ZoomOut, Maximize, Sliders, ChevronDown, Loader2, Trash2, FolderOpen, Share, Layout, Scaling, Tag, Printer } from 'lucide-react';
+import { improveText, suggestTemplateFromImage } from './services/geminiService.ts';
 import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const INITIAL_DATA: CVData = {
   personalInfo: {
@@ -120,7 +122,6 @@ const App: React.FC = () => {
   const [contentHeight, setContentHeight] = useState(1123);
 
   // Persistence Timeout Ref
-  // Using number | null for browser setTimeout compatibility
   const saveTimeoutRef = useRef<number | null>(null);
 
   const t = TRANSLATIONS[config.language];
@@ -141,7 +142,6 @@ const App: React.FC = () => {
     if (savedConfig) {
         try {
             const parsedConfig = JSON.parse(savedConfig);
-            // Migration for new global settings if missing
             if (!parsedConfig.globalDesign) {
                 parsedConfig.globalDesign = {
                     headingScale: 1,
@@ -151,7 +151,6 @@ const App: React.FC = () => {
                     borderRadius: parsedConfig.borderRadius || 4
                 };
             }
-            // Migration for tag colors
             if (!parsedConfig.colors.tagBackground) parsedConfig.colors.tagBackground = parsedConfig.colors.primary;
             if (!parsedConfig.colors.tagText) parsedConfig.colors.tagText = '#ffffff';
             
@@ -194,7 +193,6 @@ const App: React.FC = () => {
       };
   }, [cvData, config, dataLoaded, debouncedSave]);
 
-  // Persist Custom Profiles
   useEffect(() => {
       if (!dataLoaded) return;
       const customProfiles = profiles.filter(p => !DEFAULT_PROFILES.find(dp => dp.id === p.id));
@@ -202,7 +200,7 @@ const App: React.FC = () => {
   }, [profiles, dataLoaded]);
 
 
-  // Monitor Content Height for resizing (Optimized)
+  // Monitor Content Height for resizing
   useEffect(() => {
     if (!cvContentRef.current) return;
     
@@ -210,7 +208,6 @@ const App: React.FC = () => {
     const element = cvContentRef.current; 
     
     const observer = new ResizeObserver((entries) => {
-        // Debounce the updates
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
             if (!element) return;
@@ -228,142 +225,180 @@ const App: React.FC = () => {
         clearTimeout(timeoutId);
         observer.disconnect();
     };
-  }, []); // Empty deps - only mount/unmount
+  }, []);
 
-  // --- PDF GENERATION HANDLER (IFRAME METHOD) ---
-  const handlePrint = async () => {
+  // --- PDF GENERATION WITH JSPDF & HTML2CANVAS (IMAGE BASED) ---
+  const handlePrint = useCallback(async () => {
+    console.log("--- STARTING PDF GENERATION (IMAGE MODE) ---");
     const element = cvContentRef.current;
     if (!element) {
-        alert("CV Content not found.");
+        alert("Content not ready");
         return;
     }
 
     setIsGeneratingPdf(true);
 
-    try {
-        // 1. Create a hidden Iframe
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.top = '-9999px';
-        iframe.style.left = '-9999px';
-        iframe.style.width = '794px'; // A4 width
-        iframe.style.height = '1200px';
-        iframe.style.border = 'none';
-        iframe.style.zIndex = '-1';
-        document.body.appendChild(iframe);
+    // 1. Create a clone container to render at 100% scale (no zoom)
+    const cloneContainer = document.createElement('div');
+    cloneContainer.style.position = 'absolute';
+    cloneContainer.style.top = '0';
+    cloneContainer.style.left = '0';
+    cloneContainer.style.zIndex = '-9999';
+    // Ensure the clone has enough width for A4 (794px at 96dpi)
+    cloneContainer.style.width = '794px'; 
+    cloneContainer.style.visibility = 'visible';
+    document.body.appendChild(cloneContainer);
 
-        const doc = iframe.contentWindow?.document;
-        if (!doc) throw new Error("Iframe document not found");
+    // Clone the content
+    const contentClone = element.cloneNode(true) as HTMLElement;
+    contentClone.style.transform = 'none';
+    contentClone.style.boxShadow = 'none';
+    contentClone.style.margin = '0';
+    
+    // Ensure styles are forced for print capture
+    const allElements = contentClone.querySelectorAll('*');
+    allElements.forEach((el) => {
+        if (el instanceof HTMLElement) {
+             // Force white text if it was relying on dark mode preference or similar
+             // This is a safety check, usually not needed if CSS is correct
+        }
+    });
 
-        // 2. Prepare HTML content
-        // Inject Tailwind CDN
-        const tailwindCDN = `<script src="https://cdn.tailwindcss.com"></script>`;
-        // Extract font links from current head
-        const fontLinks = document.querySelector('head')?.innerHTML.match(/<link[^>]*fonts\.googleapis[^>]*>/g)?.join('') || '';
-        
-        // Extract computed CSS variables from the main CV container
-        // This ensures all the dynamic theme colors are transferred
-        const computedStyle = window.getComputedStyle(element);
-        let cssVars = '';
-        for (let i = 0; i < computedStyle.length; i++) {
-            const key = computedStyle[i];
-            if (key.startsWith('--')) {
-                cssVars += `${key}: ${computedStyle.getPropertyValue(key)};\n`;
+    cloneContainer.appendChild(contentClone);
+
+    // 1.1 Pre-process images to avoid Tainted Canvas errors (CORS)
+    // We iterate through all images, try to fetch them, and replace src with DataURI.
+    // If fetch fails (due to CORS), we hide the image to prevent the whole PDF generation from failing.
+    const images = contentClone.querySelectorAll('img');
+    const imagePromises = Array.from(images).map(async (img) => {
+        const src = img.getAttribute('src');
+        if (!src) return; 
+
+        // Skip data URIs (already safe)
+        if (src.startsWith('data:')) return; 
+
+        try {
+            // Attempt to fetch the image with CORS
+            // We set crossOrigin anonymous just in case the server supports it
+            img.setAttribute('crossOrigin', 'anonymous');
+            
+            const response = await fetch(src, { mode: 'cors', credentials: 'omit' });
+            if (!response.ok) throw new Error('Network response not ok');
+            
+            const blob = await response.blob();
+            await new Promise<void>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    if (reader.result) {
+                        img.src = reader.result as string;
+                        // Clear crossorigin attribute after conversion to avoid issues with data URI
+                        img.removeAttribute('crossOrigin');
+                    }
+                    resolve();
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.warn("CORS/Network error for image, REPLACING with placeholder:", src);
+            
+            // Replace broken/tainted image with a safe placeholder div
+            const placeholder = document.createElement('div');
+            // Copy computed dimensions if possible, or fallback
+            placeholder.style.width = (img.width || 100) + 'px';
+            placeholder.style.height = (img.height || 100) + 'px';
+            placeholder.style.backgroundColor = '#e5e7eb'; // Gray-200
+            placeholder.style.borderRadius = img.style.borderRadius;
+            placeholder.style.borderWidth = img.style.borderWidth;
+            placeholder.style.borderColor = img.style.borderColor;
+            placeholder.style.display = 'flex';
+            placeholder.style.alignItems = 'center';
+            placeholder.style.justifyContent = 'center';
+            placeholder.style.fontSize = '10px';
+            placeholder.style.color = '#9ca3af';
+            placeholder.innerText = 'No Image';
+            placeholder.className = img.className; // Keep layout classes
+            
+            if (img.parentNode) {
+                img.parentNode.replaceChild(placeholder, img);
+            } else {
+                img.style.visibility = 'hidden';
             }
         }
+    });
+
+    try {
+        // Wait for image sanitization
+        await Promise.all(imagePromises);
+
+        // Wait a tiny bit for the DOM to update with new base64 sources
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // 2. Capture the clone as a high-res image
+        const canvas = await html2canvas(cloneContainer, {
+            scale: 2, // 2x scale ensures crisp text
+            useCORS: true, // Allow external images
+            allowTaint: false, // CRITICAL: Don't allow taint. We sanitized images above. If one slips through, we want an error (but sanitation should catch it).
+            logging: false,
+            backgroundColor: '#ffffff', // Force white background
+            windowWidth: 794,
+            scrollX: 0, 
+            scrollY: 0
+        });
+
+        // FIX: Use JPEG instead of PNG. 
+        // PNG base64 strings can be too large for jsPDF, causing "Incomplete or corrupt PNG file"
+        const imgData = canvas.toDataURL('image/jpeg', 0.90);
         
-        // Get the innerHTML and className of the CV
-        const contentHTML = element.innerHTML;
-        const className = element.className;
-
-        // 3. Write complete HTML document to Iframe
-        doc.open();
-        doc.write(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="utf-8">
-                ${tailwindCDN}
-                ${fontLinks}
-                <style>
-                    body { 
-                        margin: 0; 
-                        padding: 0; 
-                        width: 794px;
-                        background: white;
-                        -webkit-print-color-adjust: exact; 
-                        print-color-adjust: exact;
-                    }
-                    .cv-wrapper {
-                        ${cssVars}
-                    }
-                    @media print {
-                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                        .no-print { display: none !important; }
-                    }
-                    /* Ensure font families are applied globally in iframe */
-                    body { font-family: 'Inter', sans-serif; }
-                </style>
-            </head>
-            <body>
-                <div class="${className} cv-wrapper" style="transform: none; margin: 0; box-shadow: none;">
-                    ${contentHTML}
-                </div>
-            </body>
-            </html>
-        `);
-        doc.close();
-
-        // 4. Wait for Resources (Tailwind & Images)
-        // Wait a bit for Tailwind script to parse and apply classes
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Safety check for tainted canvas
+        if (imgData === 'data:,') {
+             throw new Error("Canvas is tainted. Please check if your profile image allows cross-origin resource sharing (CORS).");
+        }
         
-        // Wait for images inside iframe to load
-        const images = Array.from(doc.images);
-        await Promise.all(images.map(img => {
-            if (img.complete) return Promise.resolve();
-            return new Promise(resolve => { 
-                img.onload = resolve; 
-                img.onerror = resolve; 
-            });
-        }));
+        // 3. Create PDF
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = 210; // A4 width in mm
+        const pageHeight = 297; // A4 height in mm
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        
+        // Calculate aspect ratio to fit width
+        const ratio = pdfWidth / imgWidth;
+        const scaledHeight = imgHeight * ratio;
 
-        // 5. Generate PDF using html2pdf from the iframe content
-        // @ts-ignore
-        if (window.html2pdf) {
-            const opt = {
-                margin: [0, 0, 0, 0], // No margin, handled by CV padding
-                filename: `${cvData.personalInfo.fullName.replace(/\s+/g, '_')}_CV.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true, 
-                    logging: false,
-                    scrollY: 0,
-                    scrollX: 0,
-                    windowWidth: 794,
-                    width: 794
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
+        let heightLeft = scaledHeight;
+        let position = 0;
 
-            // Capture the body of the iframe
-            // @ts-ignore
-            await window.html2pdf().set(opt).from(doc.body).save();
-        } else {
-            alert("PDF Library not loaded. Please refresh.");
+        // Add First Page (Use 'JPEG' format)
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledHeight);
+        heightLeft -= pageHeight;
+
+        // Add Subsequent Pages if content overflows
+        while (heightLeft > 0) {
+            position = position - pageHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledHeight);
+            heightLeft -= pageHeight;
         }
 
-        // Cleanup
-        document.body.removeChild(iframe);
-
-    } catch (error: any) {
-        console.error("PDF Generation Error:", error);
-        alert(`Failed to generate PDF: ${error.message}`);
+        // 4. Save
+        pdf.save(`${cvData.personalInfo.fullName.replace(/\s+/g, '_')}_CV.pdf`);
+        
+    } catch (e) {
+        console.error("PDF Generation Error:", e);
+        const msg = config.language === 'si' 
+            ? "PDF සෑදීමේ දෝෂයක්. කරුණාකර නැවත උත්සාහ කරන්න." 
+            : "Failed to generate PDF. Please try again.";
+        alert(msg);
     } finally {
+        // Cleanup
+        if (document.body.contains(cloneContainer)) {
+            document.body.removeChild(cloneContainer);
+        }
         setIsGeneratingPdf(false);
     }
-  };
+
+  }, [cvData, config.language]);
 
   const handleJsonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -452,7 +487,6 @@ const App: React.FC = () => {
                      secondary: suggestion.secondaryColor,
                      background: suggestion.backgroundColor,
                      heading: suggestion.headingColor,
-                     // Use primary for tags if not specified
                      tagBackground: suggestion.primaryColor,
                      tagText: '#ffffff'
                  },
@@ -461,6 +495,7 @@ const App: React.FC = () => {
                      heading: suggestion.headingFont
                  }
              }));
+             alert("Template style applied!");
           } catch (e) {
              console.error("Image Scan Error:", e);
              alert("Error scanning image");
@@ -597,10 +632,7 @@ const App: React.FC = () => {
           try {
               const json = JSON.parse(event.target?.result as string);
               if (Array.isArray(json)) {
-                  // Validate basic structure
                   const validProfiles = json.filter((p: any) => p.id && p.colors && p.name);
-                  
-                  // Avoid duplicates by ID
                   const newProfiles = validProfiles.filter((p: ColorProfile) => 
                     !profiles.some(existing => existing.id === p.id)
                   );
@@ -617,10 +649,10 @@ const App: React.FC = () => {
           }
       };
       reader.readAsText(file);
-      e.target.value = ''; // Reset input
+      e.target.value = '';
   };
 
-  // Improved Scale Calculation (Optimized)
+  // Improved Scale Calculation
   useEffect(() => {
     if (!previewContainerRef.current) return;
     
@@ -629,9 +661,7 @@ const App: React.FC = () => {
     const container = previewContainerRef.current;
 
     const handleResize = () => {
-        // Cancel previous RAF
         if (rafId) cancelAnimationFrame(rafId);
-        
         rafId = requestAnimationFrame(() => {
             if (scaleMode === 'manual' || !container) return;
             
@@ -643,7 +673,6 @@ const App: React.FC = () => {
             computedScale = Math.min(Math.max(computedScale, 0.2), 1.5);
             
             setPreviewScale(prev => {
-                // Prevent unnecessary updates
                 if (Math.abs(prev - computedScale) < 0.01) return prev;
                 return computedScale;
             });
@@ -657,7 +686,7 @@ const App: React.FC = () => {
 
     const resizeObserver = new ResizeObserver(debouncedResize);
     resizeObserver.observe(container);
-    handleResize(); // Initial calculation
+    handleResize();
 
     return () => {
         resizeObserver.disconnect();
@@ -666,7 +695,6 @@ const App: React.FC = () => {
     };
   }, [scaleMode]); 
 
-  // Helper to update global config
   const updateGlobalDesign = (key: keyof typeof config.globalDesign, value: any) => {
       setConfig(prev => ({
           ...prev,
@@ -674,7 +702,6 @@ const App: React.FC = () => {
               ...prev.globalDesign,
               [key]: value
           },
-          // Synch legacy values
           borderRadius: key === 'borderRadius' ? value : prev.borderRadius
       }));
   };
@@ -1105,8 +1132,8 @@ const App: React.FC = () => {
                 disabled={isGeneratingPdf}
                 className="w-full bg-blue-600 text-white py-3 rounded font-bold shadow hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-wait"
             >
-                 {isGeneratingPdf ? <Loader2 size={18} className="animate-spin"/> : <Download size={18}/>} 
-                 {isGeneratingPdf ? 'Generating PDF...' : t.downloadPdf}
+                 {isGeneratingPdf ? <Loader2 size={18} className="animate-spin"/> : <Printer size={18}/>} 
+                 {isGeneratingPdf ? (config.language === 'si' ? 'සකසමින් පවතී...' : 'Creating PDF...') : (config.language === 'si' ? 'PDF ලෙස ගන්න' : 'Download PDF')}
              </button>
              <div className="flex gap-2">
                  <button onClick={handleJsonDownload} className="flex-1 flex items-center justify-center gap-1 bg-white border border-gray-300 py-2 rounded text-xs hover:bg-gray-50 transition-colors text-gray-900">
@@ -1201,11 +1228,21 @@ const App: React.FC = () => {
           />
       )}
 
+      {/* AI LOADING OVERLAY */}
       {aiLoading && (
           <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center text-white flex-col print:hidden">
               <Bot size={48} className="animate-bounce mb-4 text-yellow-300"/>
               <p className="text-xl font-bold">{t.aiThinking}</p>
           </div>
+      )}
+
+      {/* PDF GENERATING OVERLAY */}
+      {isGeneratingPdf && (
+           <div className="fixed inset-0 bg-white/90 z-[60] flex items-center justify-center text-blue-600 flex-col print:hidden backdrop-blur-sm">
+               <Loader2 size={64} className="animate-spin mb-6 text-blue-600"/>
+               <h2 className="text-2xl font-bold mb-2">{config.language === 'si' ? 'PDF සැකසෙමින් පවතී...' : 'Creating PDF...'}</h2>
+               <p className="text-gray-500">{config.language === 'si' ? 'කරුණාකර රැඳී සිටින්න.' : 'Please wait while we render your document.'}</p>
+           </div>
       )}
 
     </div>

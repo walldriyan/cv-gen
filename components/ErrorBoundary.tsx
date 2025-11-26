@@ -1,4 +1,4 @@
-import React, { Component, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -11,20 +11,20 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+  public state: State = {
+    hasError: false,
+    error: null
+  };
 
-  static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
   }
 
-  render() {
+  public render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">

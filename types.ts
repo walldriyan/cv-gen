@@ -232,13 +232,3 @@ export const TRANSLATIONS = {
     lineStyle: "ඉරි සහ හැඩතල"
   }
 };
-
-declare global {
-  interface Window {
-    html2pdf?: () => {
-      set: (options: any) => any;
-      from: (element: HTMLElement) => any;
-      save: () => Promise<void>;
-    };
-  }
-}
